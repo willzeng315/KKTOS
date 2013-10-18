@@ -1,0 +1,36 @@
+﻿<UserControl x:Class="KKTOS.TosPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    FontFamily="{StaticResource PhoneFontFamilyNormal}"
+    FontSize="{StaticResource PhoneFontSizeNormal}"
+    Foreground="{StaticResource PhoneForegroundBrush}"
+    d:DesignHeight="480" d:DesignWidth="480"
+    Loaded="OnUserControlLoaded">
+
+    <Grid x:Name="LayoutRoot" Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Rectangle x:Name="TimeLineBar" Grid.Row="0" Height="20" Fill="Red" HorizontalAlignment="Left"/>
+
+        <Canvas x:Name="TosSpace" 
+                Grid.Row="1"
+                Margin="0,10"
+                ManipulationStarted="OnTosPanelManipulationStarted"
+                MouseEnter="OnTosPanelMouseEnter"
+                ManipulationDelta= "OnTosPanelManipulationDelta" 
+                ManipulationCompleted="OnTosPanelManipulationCompleted"
+                Background="RosyBrown">
+            <!--<Path x:Name="RoleBeanElement">
+                <Path.Data>
+                    <EllipseGeometry Center="24 24" x:Name="RoleBean" RadiusX="24" RadiusY="24" />
+                </Path.Data>
+            </Path>-->
+        </Canvas>
+        <Rectangle Grid.Row="1" Fill="Black" Width="450" Height="450" Opacity="0.7" Visibility="{Binding ManipulationComplete}"/>
+    </Grid>
+</UserControl>
