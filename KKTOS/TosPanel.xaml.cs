@@ -13,6 +13,7 @@ using System.Windows.Threading;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace KKTOS
 {
@@ -144,6 +145,7 @@ namespace KKTOS
         private Boolean TimerStart = true;
         private const Int32 CountDownSecond = 2;
         private Int32 CountDown = CountDownSecond;
+        private Boolean firstClick = true;
 
         public Int32 test;
 
@@ -182,8 +184,9 @@ namespace KKTOS
             if (CountDown == 0)
             {
                 ManipulationComplete = Visibility.Visible;
-                TosSpace.ReleaseMouseCapture();
-                LayoutRoot.ReleaseMouseCapture();
+                EliminateBeed();
+                //TosSpace.ReleaseMouseCapture();
+                //LayoutRoot.ReleaseMouseCapture();
                 //OnTosPanelManipulationCompleted(null, null);
             }
             Debug.WriteLine(CountDown);
@@ -314,6 +317,12 @@ namespace KKTOS
             return ptRes;
         }
 
+        private void EliminateBeed()
+        {
+            Thread.Sleep(2000);
+            ManipulationComplete = Visibility.Collapsed;
+        }
+
         private void OnTosPanelManipulationStarted(object sender, System.Windows.Input.ManipulationStartedEventArgs e)
         {
             offsetPoint = new Point(offsetX - e.ManipulationOrigin.X, offsetY - e.ManipulationOrigin.Y);
@@ -321,85 +330,103 @@ namespace KKTOS
 
         private void OnTosPanelMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
         {
-
             Debug.WriteLine("GameSpace_MouseEnter");
-            GetCoordinate(e.GetPosition(TosSpace));
-            //Debug.WriteLine(e.GetPosition(GameSpace));
-            //Debug.WriteLine(mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]);
-            mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
-            mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
-            mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
-            ScaleTransform trans = new ScaleTransform();
-            mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
-
-            //Debug.WriteLine(String.Format("{0},{1}", mPosCurrent.Y, mPosCurrent.X));
-            offsetX = e.GetPosition(TosSpace).X;
-            offsetY = e.GetPosition(TosSpace).Y;
-            nLastRow = mPosCurrent.Row;
-            nLastCol = mPosCurrent.Column;
-        }
-
-        private void OnTosPanelManipulationCompleted(object sender, System.Windows.Input.ManipulationCompletedEventArgs e)
-        {
-            mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
-            mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
-            mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
-            ScaleTransform trans = new ScaleTransform();
-            mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
-
-            TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
-            Timer.Stop();
-            TimerStart = true;
-            CountDown = CountDownSecond;
-            Debug.WriteLine("TimerStop");
-        }
-
-
-        private void OnTosPanelManipulationDelta(Object sender, System.Windows.Input.ManipulationDeltaEventArgs e)
-        {
-            UIElement el = (UIElement)sender;
-            if (CountDown == 0)
+            if (firstClick == false)
             {
-                el.ReleaseMouseCapture();
-            }
-
-            if (TimerStart)
-            {
-                Debug.WriteLine("TimerStart");
-                TimerStart = false;
-                Timer.Start();
-            }
-            Point realPoint = new Point(offsetPoint.X + e.ManipulationOrigin.X, offsetPoint.Y + e.ManipulationOrigin.Y);
-            GetCoordinate(realPoint);
-
-            if (Math.Abs(nLastRow - mPosCurrent.Row) == 1 || Math.Abs(nLastCol - mPosCurrent.Column) == 1)
-            {
-                //Debug.WriteLine("Change");
-                int nBeanTypeTarget = mVirtualMap[nLastRow, nLastCol];
-                mVirtualMap[nLastRow, nLastCol] = mVirtualMap[mPosCurrent.Row, mPosCurrent.Column];
-                mVirtualMap[mPosCurrent.Row, mPosCurrent.Column] = nBeanTypeTarget;
-
-                ImageSource iSource = mBeansMap[nLastRow, nLastCol].Source;
-
+                GetCoordinate(e.GetPosition(TosSpace));
+                //Debug.WriteLine(e.GetPosition(GameSpace));
+                //Debug.WriteLine(mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]);
                 mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
                 mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
                 mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
                 ScaleTransform trans = new ScaleTransform();
                 mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
 
-                mBeansMap[nLastRow, nLastCol].Source = mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Source;
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Source = iSource;
-
-
-                mBeansMap[nLastRow, nLastCol].Width = BLOCK_SIZE;
-                mBeansMap[nLastRow, nLastCol].Height = BLOCK_SIZE;
-                mBeansMap[nLastRow, nLastCol].RenderTransformOrigin = new Point(0.5, 0.5);
-                ScaleTransform trans2 = new ScaleTransform();
-                mBeansMap[nLastRow, nLastCol].RenderTransform = trans;
-
-
+                //Debug.WriteLine(String.Format("{0},{1}", mPosCurrent.Y, mPosCurrent.X));
+                offsetX = e.GetPosition(TosSpace).X;
+                offsetY = e.GetPosition(TosSpace).Y;
                 nLastRow = mPosCurrent.Row;
                 nLastCol = mPosCurrent.Column;
+            }
+        }
+
+        private void OnTosPanelManipulationCompleted(object sender, System.Windows.Input.ManipulationCompletedEventArgs e)
+        {
+            
+            Debug.WriteLine("OnTosPanelManipulationCompleted");
+            if (firstClick == false)
+            {
+                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
+                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
+                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
+                ScaleTransform trans = new ScaleTransform();
+                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
+
+                TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
+                Timer.Stop();
+                TimerStart = true;
+                CountDown = CountDownSecond;
+                ManipulationComplete = Visibility.Visible;
+                EliminateBeed();
+                Debug.WriteLine("TimerStop");
+
+            }
+            firstClick = false;
+        }
+
+
+        private void OnTosPanelManipulationDelta(Object sender, System.Windows.Input.ManipulationDeltaEventArgs e)
+        {
+            //UIElement el = (UIElement)sender;
+            if (CountDown <= 0)
+            {
+                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
+                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
+                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
+                ScaleTransform trans = new ScaleTransform();
+                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
+                Timer.Stop();
+            }
+            else
+            {
+                if (TimerStart)
+                {
+                    Debug.WriteLine("TimerStart");
+                    TimerStart = false;
+                    Timer.Start();
+                }
+                Point realPoint = new Point(offsetPoint.X + e.ManipulationOrigin.X, offsetPoint.Y + e.ManipulationOrigin.Y);
+                GetCoordinate(realPoint);
+
+                if (Math.Abs(nLastRow - mPosCurrent.Row) == 1 || Math.Abs(nLastCol - mPosCurrent.Column) == 1)
+                {
+                    //Debug.WriteLine("Change");
+                    int nBeanTypeTarget = mVirtualMap[nLastRow, nLastCol];
+                    mVirtualMap[nLastRow, nLastCol] = mVirtualMap[mPosCurrent.Row, mPosCurrent.Column];
+                    mVirtualMap[mPosCurrent.Row, mPosCurrent.Column] = nBeanTypeTarget;
+
+                    ImageSource iSource = mBeansMap[nLastRow, nLastCol].Source;
+
+                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
+                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
+                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
+                    ScaleTransform trans = new ScaleTransform();
+                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
+
+                    mBeansMap[nLastRow, nLastCol].Source = mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Source;
+                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Source = iSource;
+
+
+                    mBeansMap[nLastRow, nLastCol].Width = BLOCK_SIZE;
+                    mBeansMap[nLastRow, nLastCol].Height = BLOCK_SIZE;
+                    mBeansMap[nLastRow, nLastCol].RenderTransformOrigin = new Point(0.5, 0.5);
+                    ScaleTransform trans2 = new ScaleTransform();
+                    mBeansMap[nLastRow, nLastCol].RenderTransform = trans;
+
+
+                    nLastRow = mPosCurrent.Row;
+                    nLastCol = mPosCurrent.Column;
+                }
             }
         }
 
