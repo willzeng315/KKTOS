@@ -132,7 +132,7 @@ namespace KKTOS
         private Position mPosCurrent = new Position(-1, -1);
         private Int32[,] mVirtualMap = new Int32[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT];
         private Position[,] mVisualMap = new Position[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT];
-        private Image[,] mBeansMap = new Image[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT]; // 記下每個格子的圖片
+        private Image[,] mBeedsMap = new Image[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT]; // 記下每個格子的圖片
         private Double offsetX;
         private Double offsetY;
         private Point offsetPoint;
@@ -143,7 +143,7 @@ namespace KKTOS
         private Int32 mBeansMaxCount = 5;
         private DispatcherTimer Timer;
         private Boolean TimerStart = true;
-        private const Int32 CountDownSecond = 2;
+        private const Int32 CountDownSecond = 200;
         private Int32 CountDown = CountDownSecond;
         private Boolean firstClick = true;
 
@@ -201,8 +201,10 @@ namespace KKTOS
             {
                 for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
                 {
-                    int nLeft = ((col + 3) * 5) + (col * BLOCK_SIZE) - 15;
-                    int nTop = ((row + 3) * 5) + (row * BLOCK_SIZE) - 15;
+                    //int nLeft = ((col + 3) * 5) + (col * BLOCK_SIZE) - 15;
+                    //int nTop = ((row + 3) * 5) + (row * BLOCK_SIZE) - 15;
+                    int nLeft = (col * (BLOCK_SIZE));
+                    int nTop = (row * (BLOCK_SIZE)) ;
                     mVisualMap[row, col] = new Position(nTop, nLeft);
                 }
             }
@@ -218,15 +220,15 @@ namespace KKTOS
             {
                 for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
                 {
-                    mBeansMap[row, col] = new Image();
-                    mBeansMap[row, col].Width = BLOCK_SIZE;
-                    mBeansMap[row, col].Height = BLOCK_SIZE;
-                    mBeansMap[row, col].RenderTransformOrigin = new Point(0.5, 0.5);
+                    mBeedsMap[row, col] = new Image();
+                    mBeedsMap[row, col].Width = BLOCK_SIZE;
+                    mBeedsMap[row, col].Height = BLOCK_SIZE;
+                    mBeedsMap[row, col].RenderTransformOrigin = new Point(0.5, 0.5);
                     ScaleTransform trans = new ScaleTransform();
-                    mBeansMap[row, col].RenderTransform = trans;
-                    TosSpace.Children.Add(mBeansMap[row, col]);
-                    Canvas.SetLeft(mBeansMap[row, col], mVisualMap[row, col].X);
-                    Canvas.SetTop(mBeansMap[row, col], mVisualMap[row, col].Y);
+                    mBeedsMap[row, col].RenderTransform = trans;
+                    TosSpace.Children.Add(mBeedsMap[row, col]);
+                    Canvas.SetLeft(mBeedsMap[row, col], mVisualMap[row, col].X);
+                    Canvas.SetTop(mBeedsMap[row, col], mVisualMap[row, col].Y);
                 }
             }
         }
@@ -255,7 +257,7 @@ namespace KKTOS
                 for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
                 {
                     int rand = mRandom.Next(mBeansMaxCount) + 1;
-                    mBeansMap[row, col].Source = GetBeanImagePath(rand);
+                    mBeedsMap[row, col].Source = GetBeanImagePath(rand);
                     mVirtualMap[row, col] = rand;
                 }
             }
@@ -286,14 +288,14 @@ namespace KKTOS
             mPosPrevious.Row = 0;
             mPosPrevious.Column = 0;
 
-            Int32 FUZZY_BLOCK_SIZE = BLOCK_SIZE + 2;
+            Int32 FUZZY_BLOCK_SIZE = BLOCK_SIZE + 1;
             for (Int32 row = 0; row < BLOCK_ROW_COUNT; ++row)
             {
                 for (Int32 col = 0; col < BLOCK_COLUMN_COUNT; ++col)
                 {
                     // 讀出此列此欄的 Rect
-                    Int32 nLeft = (Int32)mVisualMap[row, col].X - 1;
-                    Int32 nTop = (Int32)mVisualMap[row, col].Y - 1;
+                    Int32 nLeft = (Int32)mVisualMap[row, col].X ;
+                    Int32 nTop = (Int32)mVisualMap[row, col].Y ;
                     Int32 nRight = nLeft + FUZZY_BLOCK_SIZE;
                     Int32 nBottom = nTop + FUZZY_BLOCK_SIZE;
                     // 是否在範圍內
@@ -319,7 +321,7 @@ namespace KKTOS
 
         private void EliminateBeed()
         {
-            Thread.Sleep(2000);
+            //Thread.Sleep(2000);
             ManipulationComplete = Visibility.Collapsed;
         }
 
@@ -336,17 +338,29 @@ namespace KKTOS
                 GetCoordinate(e.GetPosition(TosSpace));
                 //Debug.WriteLine(e.GetPosition(GameSpace));
                 //Debug.WriteLine(mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]);
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
-                ScaleTransform trans = new ScaleTransform();
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
-
+                //mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
+                //mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
+                //mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
+                //ScaleTransform trans = new ScaleTransform();
+                //mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = null;
                 //Debug.WriteLine(String.Format("{0},{1}", mPosCurrent.Y, mPosCurrent.X));
                 offsetX = e.GetPosition(TosSpace).X;
                 offsetY = e.GetPosition(TosSpace).Y;
                 nLastRow = mPosCurrent.Row;
                 nLastCol = mPosCurrent.Column;
+
+
+                cursorImage = new Image();
+                cursorImage.Width = BLOCK_SIZE;
+                cursorImage.Height = BLOCK_SIZE;
+                cursorImage.RenderTransformOrigin = new Point(0.5, 0.5);
+                ScaleTransform trans2 = new ScaleTransform();
+                cursorImage.RenderTransform = trans2;
+                cursorImage.Source = GetBeanImagePath((mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]));
+                TosSpace.Children.Add(cursorImage);
+                Canvas.SetLeft(cursorImage, e.GetPosition(TosSpace).X);
+                Canvas.SetTop(cursorImage, e.GetPosition(TosSpace).Y);
             }
         }
 
@@ -356,11 +370,12 @@ namespace KKTOS
             Debug.WriteLine("OnTosPanelManipulationCompleted");
             if (firstClick == false)
             {
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = cursorImage.Source;
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
                 ScaleTransform trans = new ScaleTransform();
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
 
                 TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
                 Timer.Stop();
@@ -368,23 +383,26 @@ namespace KKTOS
                 CountDown = CountDownSecond;
                 ManipulationComplete = Visibility.Visible;
                 EliminateBeed();
+                TosSpace.Children.Remove(cursorImage);
                 Debug.WriteLine("TimerStop");
 
             }
             firstClick = false;
         }
-
+        
+        private Image cursorImage;
+        private UInt32 cursorShift = 20;
 
         private void OnTosPanelManipulationDelta(Object sender, System.Windows.Input.ManipulationDeltaEventArgs e)
         {
             //UIElement el = (UIElement)sender;
             if (CountDown <= 0)
             {
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
                 ScaleTransform trans = new ScaleTransform();
-                mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
+                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
                 Timer.Stop();
             }
             else
@@ -398,30 +416,37 @@ namespace KKTOS
                 Point realPoint = new Point(offsetPoint.X + e.ManipulationOrigin.X, offsetPoint.Y + e.ManipulationOrigin.Y);
                 GetCoordinate(realPoint);
 
+                Canvas.SetLeft(cursorImage, realPoint.X - cursorShift);
+                Canvas.SetTop(cursorImage, realPoint.Y - cursorShift);
+
+
                 if (Math.Abs(nLastRow - mPosCurrent.Row) == 1 || Math.Abs(nLastCol - mPosCurrent.Column) == 1)
                 {
                     //Debug.WriteLine("Change");
+
+
+
                     int nBeanTypeTarget = mVirtualMap[nLastRow, nLastCol];
                     mVirtualMap[nLastRow, nLastCol] = mVirtualMap[mPosCurrent.Row, mPosCurrent.Column];
                     mVirtualMap[mPosCurrent.Row, mPosCurrent.Column] = nBeanTypeTarget;
 
-                    ImageSource iSource = mBeansMap[nLastRow, nLastCol].Source;
+                    ImageSource iSource = mBeedsMap[nLastRow, nLastCol].Source;
 
-                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
-                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
-                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
+                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
+                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
+                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
                     ScaleTransform trans = new ScaleTransform();
-                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
+                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
 
-                    mBeansMap[nLastRow, nLastCol].Source = mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Source;
-                    mBeansMap[mPosCurrent.Row, mPosCurrent.Column].Source = iSource;
+                    mBeedsMap[nLastRow, nLastCol].Source = mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source;
+                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = iSource;
 
 
-                    mBeansMap[nLastRow, nLastCol].Width = BLOCK_SIZE;
-                    mBeansMap[nLastRow, nLastCol].Height = BLOCK_SIZE;
-                    mBeansMap[nLastRow, nLastCol].RenderTransformOrigin = new Point(0.5, 0.5);
+                    mBeedsMap[nLastRow, nLastCol].Width = BLOCK_SIZE;
+                    mBeedsMap[nLastRow, nLastCol].Height = BLOCK_SIZE;
+                    mBeedsMap[nLastRow, nLastCol].RenderTransformOrigin = new Point(0.5, 0.5);
                     ScaleTransform trans2 = new ScaleTransform();
-                    mBeansMap[nLastRow, nLastCol].RenderTransform = trans;
+                    mBeedsMap[nLastRow, nLastCol].RenderTransform = trans;
 
 
                     nLastRow = mPosCurrent.Row;
@@ -434,7 +459,7 @@ namespace KKTOS
         {
             Debug.WriteLine("UserControl_Loaded");
             Debug.WriteLine(LayoutRoot.ActualWidth);
-            BLOCK_SIZE = (Int32)(LayoutRoot.ActualWidth/6.5);
+            BLOCK_SIZE = (Int32)(LayoutRoot.ActualWidth/6.0);
             BLOCK_RADIUS = (BLOCK_SIZE / 2);
 
             TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
