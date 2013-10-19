@@ -143,9 +143,11 @@ namespace KKTOS
         private Int32 mBeansMaxCount = 5;
         private DispatcherTimer Timer;
         private Boolean TimerStart = true;
-        private const Int32 CountDownSecond = 200;
+        private const Int32 CountDownSecond = 20;
         private Int32 CountDown = CountDownSecond;
         private Boolean firstClick = true;
+        private Image cursorImage;
+        private UInt32 cursorShift = 20;
 
         public Int32 test;
 
@@ -176,8 +178,6 @@ namespace KKTOS
 
         private void OnTimerTick(Object sender, EventArgs e)
         {
-
-            //Debug.WriteLine(TimeLineBar.ActualWidth);
             Debug.WriteLine(CountDown);
             //TimeLineBar.Width -= 50;
             CountDown--;
@@ -185,9 +185,6 @@ namespace KKTOS
             {
                 ManipulationComplete = Visibility.Visible;
                 EliminateBeed();
-                //TosSpace.ReleaseMouseCapture();
-                //LayoutRoot.ReleaseMouseCapture();
-                //OnTosPanelManipulationCompleted(null, null);
             }
             Debug.WriteLine(CountDown);
         }
@@ -201,10 +198,8 @@ namespace KKTOS
             {
                 for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
                 {
-                    //int nLeft = ((col + 3) * 5) + (col * BLOCK_SIZE) - 15;
-                    //int nTop = ((row + 3) * 5) + (row * BLOCK_SIZE) - 15;
                     int nLeft = (col * (BLOCK_SIZE));
-                    int nTop = (row * (BLOCK_SIZE)) ;
+                    int nTop = (row * (BLOCK_SIZE));
                     mVisualMap[row, col] = new Position(nTop, nLeft);
                 }
             }
@@ -256,26 +251,24 @@ namespace KKTOS
             {
                 for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
                 {
-                    int rand = mRandom.Next(mBeansMaxCount) + 1;
-                    mBeedsMap[row, col].Source = GetBeanImagePath(rand);
+                    Int32 rand = mRandom.Next(mBeansMaxCount) + 1;
+                    mBeedsMap[row, col].Source = GetBeedImage(rand);
                     mVirtualMap[row, col] = rand;
                 }
             }
         }
 
-        private void InitialBitmapImage()
+        private void InitBeedImages()
         {
-
             beedImages = new BitmapImage[5];
             for (int i = 0; i < 5; i++)
             {
                 String strPath = String.Format(BEAN_PATH_TEMPLATE, i + 1);
                 beedImages[i] = new BitmapImage(new Uri(strPath, UriKind.Relative));
             }
-
         }
 
-        private BitmapImage GetBeanImagePath(Int32 type)
+        private BitmapImage GetBeedImage(Int32 type)
         {
             return beedImages[type - 1];
         }
@@ -294,8 +287,8 @@ namespace KKTOS
                 for (Int32 col = 0; col < BLOCK_COLUMN_COUNT; ++col)
                 {
                     // 讀出此列此欄的 Rect
-                    Int32 nLeft = (Int32)mVisualMap[row, col].X ;
-                    Int32 nTop = (Int32)mVisualMap[row, col].Y ;
+                    Int32 nLeft = (Int32)mVisualMap[row, col].X;
+                    Int32 nTop = (Int32)mVisualMap[row, col].Y;
                     Int32 nRight = nLeft + FUZZY_BLOCK_SIZE;
                     Int32 nBottom = nTop + FUZZY_BLOCK_SIZE;
                     // 是否在範圍內
@@ -325,85 +318,73 @@ namespace KKTOS
             ManipulationComplete = Visibility.Collapsed;
         }
 
-        private void OnTosPanelManipulationStarted(object sender, System.Windows.Input.ManipulationStartedEventArgs e)
+        private void OnTosPanelManipulationStarted(Object sender, System.Windows.Input.ManipulationStartedEventArgs e)
         {
             offsetPoint = new Point(offsetX - e.ManipulationOrigin.X, offsetY - e.ManipulationOrigin.Y);
         }
 
-        private void OnTosPanelMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        private void OnTosPanelMouseEnter(Object sender, System.Windows.Input.MouseEventArgs e)
         {
             Debug.WriteLine("GameSpace_MouseEnter");
             if (firstClick == false)
             {
                 GetCoordinate(e.GetPosition(TosSpace));
-                //Debug.WriteLine(e.GetPosition(GameSpace));
-                //Debug.WriteLine(mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]);
-                //mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
-                //mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
-                //mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
-                //ScaleTransform trans = new ScaleTransform();
-                //mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
                 mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = null;
-                //Debug.WriteLine(String.Format("{0},{1}", mPosCurrent.Y, mPosCurrent.X));
                 offsetX = e.GetPosition(TosSpace).X;
                 offsetY = e.GetPosition(TosSpace).Y;
                 nLastRow = mPosCurrent.Row;
                 nLastCol = mPosCurrent.Column;
 
-
-                cursorImage = new Image();
-                cursorImage.Width = BLOCK_SIZE;
-                cursorImage.Height = BLOCK_SIZE;
-                cursorImage.RenderTransformOrigin = new Point(0.5, 0.5);
-                ScaleTransform trans2 = new ScaleTransform();
-                cursorImage.RenderTransform = trans2;
-                cursorImage.Source = GetBeanImagePath((mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]));
-                TosSpace.Children.Add(cursorImage);
-                Canvas.SetLeft(cursorImage, e.GetPosition(TosSpace).X);
-                Canvas.SetTop(cursorImage, e.GetPosition(TosSpace).Y);
+                CreateCursorImage(e.GetPosition(TosSpace));
             }
         }
+
+        private void CreateCursorImage(Point pos)
+        {
+            cursorImage = new Image();
+            cursorImage.Width = BLOCK_SIZE;
+            cursorImage.Height = BLOCK_SIZE;
+            cursorImage.RenderTransformOrigin = new Point(0.5, 0.5);
+            ScaleTransform trans2 = new ScaleTransform();
+            cursorImage.RenderTransform = trans2;
+            cursorImage.Source = GetBeedImage((mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]));
+            TosSpace.Children.Add(cursorImage);
+            Canvas.SetLeft(cursorImage, pos.X - cursorShift);
+            Canvas.SetTop(cursorImage, pos.Y - cursorShift);
+        }
+
+        private void ManipulationCompletedState()
+        {
+            mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = cursorImage.Source;
+            TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
+            Timer.Stop();
+            TimerStart = true;
+            CountDown = CountDownSecond;
+            ManipulationComplete = Visibility.Visible;
+            EliminateBeed();
+            TosSpace.Children.Remove(cursorImage);
+        }
+
 
         private void OnTosPanelManipulationCompleted(object sender, System.Windows.Input.ManipulationCompletedEventArgs e)
         {
-            
+
             Debug.WriteLine("OnTosPanelManipulationCompleted");
             if (firstClick == false)
             {
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = cursorImage.Source;
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
-                ScaleTransform trans = new ScaleTransform();
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
-
-                TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
-                Timer.Stop();
-                TimerStart = true;
-                CountDown = CountDownSecond;
-                ManipulationComplete = Visibility.Visible;
-                EliminateBeed();
-                TosSpace.Children.Remove(cursorImage);
+                ManipulationCompletedState();
                 Debug.WriteLine("TimerStop");
-
             }
             firstClick = false;
         }
-        
-        private Image cursorImage;
-        private UInt32 cursorShift = 20;
+
+
 
         private void OnTosPanelManipulationDelta(Object sender, System.Windows.Input.ManipulationDeltaEventArgs e)
         {
-            //UIElement el = (UIElement)sender;
             if (CountDown <= 0)
             {
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE;
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE;
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
-                ScaleTransform trans = new ScaleTransform();
-                mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
-                Timer.Stop();
+                ManipulationCompletedState();
             }
             else
             {
@@ -422,32 +403,13 @@ namespace KKTOS
 
                 if (Math.Abs(nLastRow - mPosCurrent.Row) == 1 || Math.Abs(nLastCol - mPosCurrent.Column) == 1)
                 {
-                    //Debug.WriteLine("Change");
-
-
-
-                    int nBeanTypeTarget = mVirtualMap[nLastRow, nLastCol];
+                    Int32 nBeanTypeTarget = mVirtualMap[nLastRow, nLastCol];
                     mVirtualMap[nLastRow, nLastCol] = mVirtualMap[mPosCurrent.Row, mPosCurrent.Column];
                     mVirtualMap[mPosCurrent.Row, mPosCurrent.Column] = nBeanTypeTarget;
 
                     ImageSource iSource = mBeedsMap[nLastRow, nLastCol].Source;
-
-                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Width = BLOCK_SIZE + 10;
-                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Height = BLOCK_SIZE + 10;
-                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransformOrigin = new Point(0.5, 0.5);
-                    ScaleTransform trans = new ScaleTransform();
-                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].RenderTransform = trans;
-
                     mBeedsMap[nLastRow, nLastCol].Source = mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source;
                     mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = iSource;
-
-
-                    mBeedsMap[nLastRow, nLastCol].Width = BLOCK_SIZE;
-                    mBeedsMap[nLastRow, nLastCol].Height = BLOCK_SIZE;
-                    mBeedsMap[nLastRow, nLastCol].RenderTransformOrigin = new Point(0.5, 0.5);
-                    ScaleTransform trans2 = new ScaleTransform();
-                    mBeedsMap[nLastRow, nLastCol].RenderTransform = trans;
-
 
                     nLastRow = mPosCurrent.Row;
                     nLastCol = mPosCurrent.Column;
@@ -459,11 +421,11 @@ namespace KKTOS
         {
             Debug.WriteLine("UserControl_Loaded");
             Debug.WriteLine(LayoutRoot.ActualWidth);
-            BLOCK_SIZE = (Int32)(LayoutRoot.ActualWidth/6.0);
+            BLOCK_SIZE = (Int32)(LayoutRoot.ActualWidth / 6.0);
             BLOCK_RADIUS = (BLOCK_SIZE / 2);
 
             TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
-            InitialBitmapImage();
+            InitBeedImages();
             InitMapPosition();
             InitVirtualMap();
             CreateBeansMap();
