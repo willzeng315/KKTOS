@@ -654,20 +654,55 @@ namespace KKTOS
                 Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
                 Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
                 frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
-                dblSeconePosition += 1;
+                dblSeconePosition += 1;//Constants.ANIMATION_STEP_BLOCK;
             }
+            Storyboard.SetTarget(frames, RoleBean);
+            Storyboard.SetTargetProperty(frames, new PropertyPath(EllipseGeometry.CenterProperty));
 
-
-            Image testImage = new Image();
-            testImage.Source = mBeedsMap[nSourceRow,nSourceColumn].Source;
-            CompositeTransform imageComposite = new CompositeTransform();
-            testImage.RenderTransform = imageComposite;
-
-            //RectangleGeometry image = new RectangleGeometry();
-            Storyboard.SetTarget(frames, imageComposite);
-            Storyboard.SetTargetProperty(frames, new PropertyPath(CompositeTransform.TranslateYProperty));
             Storyboard storyboard = new Storyboard();
             storyboard.Children.Add(frames);
+
+            // 把 EllipseGeometry 貼上正確的圖片並秀出來、移到正確的位置
+            RoleBeanElement.Fill = new ImageBrush() { ImageSource = mBeedsMap[nSourceRow, nSourceColumn].Source };
+            Canvas.SetLeft(RoleBeanElement, mVisualMap[nSourceRow, nSourceColumn].X);
+            Canvas.SetTop(RoleBeanElement, mVisualMap[nSourceRow, nSourceColumn].Y);
+            // 把原本在底下的圖片清掉
+            mBeedsMap[nSourceRow, nSourceColumn].Source = null;
+
+            storyboard.Begin();
+            //Position posSource = mPath[0];
+            //int nSourceRow = (int)posSource.Row;
+            //int nSourceColumn = (int)posSource.Column;
+            //int nSourcePositionX = (int)mVisualMap[nSourceRow, nSourceColumn].X - BLOCK_RADIUS;
+            //int nSourcePositionY = (int)mVisualMap[nSourceRow, nSourceColumn].Y - BLOCK_RADIUS;
+
+            //PointAnimationUsingKeyFrames frames = new PointAnimationUsingKeyFrames();
+            //Double dblSeconePosition = 0.0;
+            //for (int i = 0; i < mPath.Count; ++i)
+            //{
+            //    KeyTime kTime = KeyTime.FromTimeSpan(TimeSpan.FromSeconds(dblSeconePosition));
+            //    Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
+            //    Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
+            //    frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
+            //    dblSeconePosition += 1;
+            //}
+
+
+            //Image testImage = new Image();
+            //testImage.Source = mBeedsMap[nSourceRow,nSourceColumn].Source;
+            //testImage.Width = 60;
+            //testImage.Height = 60;
+            //CompositeTransform imageComposite = new CompositeTransform();
+            //testImage.RenderTransform = imageComposite;
+            //Canvas.SetLeft(testImage, 100);
+            //Canvas.SetTop(testImage, 100);
+
+            ////RectangleGeometry image = new RectangleGeometry();
+            //Storyboard.SetTarget(frames, imageComposite);
+            //Storyboard.SetTargetProperty(frames, new PropertyPath(CompositeTransform.TranslateYProperty));
+            //Storyboard storyboard = new Storyboard();
+            //storyboard.Children.Add(frames);
+            //storyboard.Begin();
             //image.fill
             // 把 EllipseGeometry 貼上正確的圖片並秀出來、移到正確的位置
             //RoleBeanElement.Fill = new ImageBrush() { ImageSource = GetBeanImagePath(beanType) };
@@ -678,7 +713,7 @@ namespace KKTOS
 
             // 開始跑
             //mAnimationRunning = true;
-            storyboard.Begin();
+            
         }
 
         private void ComputeEachBeedFallCount()
