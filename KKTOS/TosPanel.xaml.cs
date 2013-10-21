@@ -15,6 +15,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 
 namespace KKTOS
 {
@@ -573,10 +574,10 @@ namespace KKTOS
             storyboard.Begin();
         }
 
-
+        private Int32 beginMilliSecond = 0;
         private void EliminateBeed()
         {
-            Int32 beginMilliSecond = 0;
+            
             for (int type = 0; type < mBeedsMaxCount; type++)
             {
                 for (int i = 0; i < mBeedChainHorizontal[type].Count; i++)
@@ -607,6 +608,7 @@ namespace KKTOS
                     }
                     beginMilliSecond += delayMilliSecond;
                 }
+                //beginMilliSecond -= delayMilliSecond;
                 for (int belong = 0; belong < mVHChain[type]; belong++)
                 {
                     ScaleTransform imageTrans = new ScaleTransform();
@@ -654,66 +656,50 @@ namespace KKTOS
                 Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
                 Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
                 frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
-                dblSeconePosition += 1;//Constants.ANIMATION_STEP_BLOCK;
+                dblSeconePosition += 0.5;
             }
-            Storyboard.SetTarget(frames, RoleBean);
-            Storyboard.SetTargetProperty(frames, new PropertyPath(EllipseGeometry.CenterProperty));
 
+
+            Path RoleBeedElement = new Path();
+            EllipseGeometry RoleBeed = new EllipseGeometry();
+
+            RoleBeed.RadiusX = BLOCK_RADIUS;
+            RoleBeed.RadiusY = BLOCK_RADIUS;
+
+            RoleBeed.Center = new Point(BLOCK_RADIUS,BLOCK_RADIUS);
+            RoleBeedElement.Data = RoleBeed;
+
+            Storyboard.SetTarget(frames, RoleBeed);
+            Storyboard.SetTargetProperty(frames, new PropertyPath(EllipseGeometry.CenterProperty));
             Storyboard storyboard = new Storyboard();
             storyboard.Children.Add(frames);
 
-            // 把 EllipseGeometry 貼上正確的圖片並秀出來、移到正確的位置
-            RoleBeanElement.Fill = new ImageBrush() { ImageSource = mBeedsMap[nSourceRow, nSourceColumn].Source };
-            Canvas.SetLeft(RoleBeanElement, mVisualMap[nSourceRow, nSourceColumn].X);
-            Canvas.SetTop(RoleBeanElement, mVisualMap[nSourceRow, nSourceColumn].Y);
-            // 把原本在底下的圖片清掉
+            RoleBeedElement.Fill = new ImageBrush() { ImageSource = mBeedsMap[nSourceRow, nSourceColumn].Source };
+            Canvas.SetLeft(RoleBeedElement, mVisualMap[nSourceRow, nSourceColumn].X);
+            Canvas.SetTop(RoleBeedElement, mVisualMap[nSourceRow, nSourceColumn].Y);
+            TosSpace.Children.Add(RoleBeedElement);
+
             mBeedsMap[nSourceRow, nSourceColumn].Source = null;
-
+            //storyboard.Completed += OnStoryboardCompleted;
+            storyboard.BeginTime = new TimeSpan(0, 0, 0, 0, beginMilliSecond + 200); ;
             storyboard.Begin();
-            //Position posSource = mPath[0];
-            //int nSourceRow = (int)posSource.Row;
-            //int nSourceColumn = (int)posSource.Column;
-            //int nSourcePositionX = (int)mVisualMap[nSourceRow, nSourceColumn].X - BLOCK_RADIUS;
-            //int nSourcePositionY = (int)mVisualMap[nSourceRow, nSourceColumn].Y - BLOCK_RADIUS;
+        }
 
-            //PointAnimationUsingKeyFrames frames = new PointAnimationUsingKeyFrames();
-            //Double dblSeconePosition = 0.0;
-            //for (int i = 0; i < mPath.Count; ++i)
-            //{
-            //    KeyTime kTime = KeyTime.FromTimeSpan(TimeSpan.FromSeconds(dblSeconePosition));
-            //    Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
-            //    Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
-            //    frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
-            //    dblSeconePosition += 1;
-            //}
+        private void OnStoryboardCompleted(object sender, EventArgs e)
+        {
+            //Position ptTarget = mPath[1];
+            //int nTargetRow = (int)ptTarget.Row;
+            //int nTargetColumn = (int)ptTarget.Column;
+            //Position ptSource = mPath[0];
+            //int nSourceRow = (int)ptSource.Row;
+            //int nSourceColumn = (int)ptSource.Column;
+            ////Debug.WriteLine("MoveCompleted :: " + nTargetRow + ", " + nTargetColumn);
+            ////// 把 EllipseGeometry 的圖片清掉
+            ////RoleBeanElement.Fill = null;
 
-
-            //Image testImage = new Image();
-            //testImage.Source = mBeedsMap[nSourceRow,nSourceColumn].Source;
-            //testImage.Width = 60;
-            //testImage.Height = 60;
-            //CompositeTransform imageComposite = new CompositeTransform();
-            //testImage.RenderTransform = imageComposite;
-            //Canvas.SetLeft(testImage, 100);
-            //Canvas.SetTop(testImage, 100);
-
-            ////RectangleGeometry image = new RectangleGeometry();
-            //Storyboard.SetTarget(frames, imageComposite);
-            //Storyboard.SetTargetProperty(frames, new PropertyPath(CompositeTransform.TranslateYProperty));
-            //Storyboard storyboard = new Storyboard();
-            //storyboard.Children.Add(frames);
-            //storyboard.Begin();
-            //image.fill
-            // 把 EllipseGeometry 貼上正確的圖片並秀出來、移到正確的位置
-            //RoleBeanElement.Fill = new ImageBrush() { ImageSource = GetBeanImagePath(beanType) };
-            //Canvas.SetLeft(RoleBeanElement, mVisualMap[nSourceRow, nSourceColumn].X);
-            //Canvas.SetTop(RoleBeanElement, mVisualMap[nSourceRow, nSourceColumn].Y);
-            // 把原本在底下的圖片清掉
-            //mBeansMap[nSourceRow, nSourceColumn].Source = null;
-
-            // 開始跑
-            //mAnimationRunning = true;
-            
+            ////// 把目的地的圖貼上去
+            //mBeansMap[nTargetRow, nTargetColumn].Source = GetBeanImagePath(mVirtualMap[nTargetRow, nTargetColumn]);
+            //mBeansMap[nSourceRow, nSourceColumn].Source = GetBeanImagePath(mVirtualMap[nSourceRow, nSourceColumn]);
         }
 
         private void ComputeEachBeedFallCount()
@@ -786,6 +772,19 @@ namespace KKTOS
             }
         }
 
+        private void FallOriginalBeeds()
+        {
+            for (int i = 0; i < mBeedFallCollection.Count; i++)
+            {
+                List<Position> mPath = new List<Position>();
+                mPath.Add(mBeedFallCollection[i].Pos);
+                mPath.Add(new Position(mBeedFallCollection[i].Pos.Row + mBeedFallCollection[i].FallCount, mBeedFallCollection[i].Pos.Column));
+                mVirtualMap[mBeedFallCollection[i].Pos.Row + mBeedFallCollection[i].FallCount, mBeedFallCollection[i].Pos.Column] = mVirtualMap[mBeedFallCollection[i].Pos.Row , mBeedFallCollection[i].Pos.Column];
+                MoveRemainBeeds(mPath);
+            }
+        }
+
+
         private void StartEliminateBeed()
         {
             ManipulationComplete = Visibility.Collapsed;
@@ -796,10 +795,7 @@ namespace KKTOS
             EliminateBeed();
             CheckBeedBoardHoles();
             ComputeEachBeedFallCount();
-            List<Position> mPath = new List<Position>();
-            mPath.Add(mBeedFallCollection[0].Pos);
-            mPath.Add(new Position(mBeedFallCollection[0].Pos.Row + mBeedFallCollection[0].FallCount, mBeedFallCollection[0].Pos.Column));
-            MoveRemainBeeds(mPath);
+            FallOriginalBeeds();
         }
 
         private void OnTosPanelManipulationStarted(Object sender, System.Windows.Input.ManipulationStartedEventArgs e)

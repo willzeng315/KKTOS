@@ -25,11 +25,11 @@
                 ManipulationDelta= "OnTosPanelManipulationDelta" 
                 ManipulationCompleted="OnTosPanelManipulationCompleted"
                 Background="RosyBrown">
-            <Path x:Name="RoleBeanElement">
+            <!--<Path x:Name="RoleBeanElement">
                 <Path.Data>
                     <EllipseGeometry Center="24 24" x:Name="RoleBean" RadiusX="24" RadiusY="24" />
                 </Path.Data>
-            </Path>
+            </Path>-->
         </Canvas>
         <Rectangle Grid.Row="1" Fill="Black" Width="450" Height="450" Opacity="0.5" Visibility="{Binding ManipulationComplete}"/>
     </Grid>
