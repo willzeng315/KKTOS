@@ -20,20 +20,11 @@ namespace KKTOS
         {
             InitializeComponent();
             Debug.WriteLine("MainPage");
-            colorBeedCollection = new List<List<Int32>>();
-            for (int i = 0; i < 5; i++)
+
+            for (int i = 100; i < 10; i++)
             {
-                List<Int32> a = new List<Int32>();
-                colorBeedCollection.Add(a);
+                Debug.WriteLine(i);
             }
-            colorBeedCollection[0].Add(25345);
-            colorBeedCollection[4].Add(223);
-
-            // 將 ApplicationBar 當地語系化的程式碼範例
-            //BuildLocalizedApplicationBar();
-            Debug.WriteLine(colorBeedCollection[0][0]);
-            Debug.WriteLine(colorBeedCollection[4][0]);
-
         }
 
         private void beedPanel1_ManipulationStarted(object sender, System.Windows.Input.ManipulationStartedEventArgs e)

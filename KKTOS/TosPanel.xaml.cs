@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Windows.Media.Animation;
 
 namespace KKTOS
 {
@@ -104,9 +105,9 @@ namespace KKTOS
             belongs = -1;
         }
 
-        private Position startPos;
-        private Int32 chainLength;
-        private Int32 belongs;
+        public Position startPos;
+        public Int32 chainLength;
+        public Int32 belongs;
     }
 
     public partial class TosPanel : UserControl, INotifyPropertyChanged
@@ -163,6 +164,9 @@ namespace KKTOS
         private List<List<BeedChain>> mBeedChainSet;
         private List<List<BeedChain>> mBeedChainHorizontal;
         private List<List<BeedChain>> mBeedChainVertical;
+        public List<List<Int32>> EachBeedChainCount;
+        private Int32[] mVHChain = new Int32[mBeedsMaxCount];
+        private List<Boolean> mIsBeedChecked;
 
 
         public Int32 test;
@@ -192,8 +196,8 @@ namespace KKTOS
             InitBeedImages();
             InitMapPosition();
             InitVirtualMap();
-            CreateBeansMap();
-            InitBeansMap();
+            CreateBeedsMap();
+            InitBeedsMap();
         }
 
         public TosPanel()
@@ -216,7 +220,7 @@ namespace KKTOS
             if (CountDown == 0)
             {
                 ManipulationComplete = Visibility.Visible;
-                EliminateBeed();
+                StartEliminateBeed();
             }
             Debug.WriteLine(CountDown);
         }
@@ -226,13 +230,18 @@ namespace KKTOS
             mBeedChainSet = new List<List<BeedChain>>();
             mBeedChainHorizontal = new List<List<BeedChain>>();
             mBeedChainVertical = new List<List<BeedChain>>();
-
+            EachBeedChainCount = new List<List<Int32>>();
             for (int i = 0; i < mBeedsMaxCount; i++)
             {
+                List<BeedChain> nullBeedChainHorizontal = new List<BeedChain>();
+                List<BeedChain> nullBeedChainVertical = new List<BeedChain>();
                 List<BeedChain> nullBeedChain = new List<BeedChain>();
+                List<Int32> nullBeedChainCount = new List<Int32>();
+
+                EachBeedChainCount.Add(nullBeedChainCount);
                 mBeedChainSet.Add(nullBeedChain);
-                mBeedChainHorizontal.Add(nullBeedChain);
-                mBeedChainVertical.Add(nullBeedChain);
+                mBeedChainHorizontal.Add(nullBeedChainHorizontal);
+                mBeedChainVertical.Add(nullBeedChainVertical);
             }
         }
 
@@ -255,7 +264,7 @@ namespace KKTOS
         /// <summary>
         /// 產生足夠的種子圖片元件到 GameSpace 裡面
         /// </summary>
-        private void CreateBeansMap()
+        private void CreateBeedsMap()
         {
             // 把 mBeansMap 依 mVisualMap 的座標排好
             for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
@@ -292,7 +301,7 @@ namespace KKTOS
         /// <summary>
         /// 將每個格子記錄的圖片清空
         /// </summary>
-        private void InitBeansMap()
+        private void InitBeedsMap()
         {
             for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
             {
@@ -360,27 +369,242 @@ namespace KKTOS
         {
             for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
             {
-                for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
+                Int32 LastLength =0;
+                for (int col = 0; col <= BLOCK_COLUMN_COUNT - MIN_CHAIN_LEN; ++col)
                 {
-                    mVirtualMap[row, col] = 0;
+                    if (LastLength > 1)
+                    {
+                        LastLength--;
+                        continue;
+                    }
+                    Int32 type = mVirtualMap[row, col];
+                    Int32 chainLength = 1;
+
+                    for (int i = col + 1; i < BLOCK_COLUMN_COUNT; ++i)
+                    {
+                        if(mVirtualMap[row, i] == type)
+                        {
+                            chainLength++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    if (chainLength >= MIN_CHAIN_LEN)
+                    {
+                        LastLength = chainLength;
+                        BeedChain beedChain = new BeedChain();
+                        beedChain.startPos = new Position(row,col);
+                        beedChain.chainLength = chainLength;
+                        mBeedChainHorizontal[type-1].Add(beedChain);
+                    }
+                     
                 }
             }
         }
 
         private void FindBeedChainVertical()
         {
-            for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
+            for (int col = 0; col < BLOCK_COLUMN_COUNT ; ++col)
             {
-                for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
+                Int32 LastLength = 0;
+                for (int row = 0; row <= BLOCK_ROW_COUNT - MIN_CHAIN_LEN; ++row)
                 {
-                    mVirtualMap[row, col] = 0;
+                    if (LastLength > 1)
+                    {
+                        LastLength--;
+                        continue;
+                    }
+                    Int32 type = mVirtualMap[row, col];
+                    Int32 chainLength = 1;
+
+                    for (int i = row + 1; i < BLOCK_ROW_COUNT; ++i)
+                    {
+                        if (mVirtualMap[i, col] == type)
+                        {
+                            chainLength++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    if (chainLength >= MIN_CHAIN_LEN)
+                    {
+                        LastLength = chainLength;
+                        BeedChain beedChain = new BeedChain();
+                        beedChain.startPos = new Position(row, col);
+                        beedChain.chainLength = chainLength;
+                        mBeedChainVertical[type - 1].Add(beedChain);
+                    }
+
+                }
+            }
+        
+        }
+
+        private void FindIntersectionHV()
+        {
+            for (int type = 0; type < mBeedsMaxCount; type++)
+            {
+                mVHChain[type] = 0;
+                Int32 chainCount = 0;
+                for (int i = 0; i < mBeedChainHorizontal[type].Count; i++)
+                {
+                    for (int j = 0; j < mBeedChainVertical[type].Count; j++)
+                    {
+                        Int32 vStartRow = mBeedChainVertical[type][j].startPos.Row;
+                        Int32 vEndRow = mBeedChainVertical[type][j].startPos.Row + mBeedChainVertical[type][j].chainLength-1;
+                        Int32 hStartCol = mBeedChainHorizontal[type][i].startPos.Column;
+                        Int32 hEndCol = mBeedChainHorizontal[type][i].startPos.Column + mBeedChainHorizontal[type][i].chainLength - 1;
+
+                        if (hStartCol <= mBeedChainVertical[type][j].startPos.Column && mBeedChainVertical[type][j].startPos.Column <= hEndCol
+                            && vStartRow <= mBeedChainHorizontal[type][i].startPos.Row && mBeedChainHorizontal[type][i].startPos.Row <= vEndRow)
+                        {
+                            if (mBeedChainVertical[type][j].belongs == -1)
+                            {
+                                if (mBeedChainHorizontal[type][i].belongs == -1)
+                                {
+                                    mBeedChainVertical[type][j].belongs = chainCount;
+                                    mBeedChainHorizontal[type][i].belongs = chainCount;
+                                    EachBeedChainCount[type].Add(mBeedChainVertical[type][j].chainLength + mBeedChainHorizontal[type][i].chainLength - 1);
+                                    chainCount++;
+                                }
+                                else
+                                {
+                                    mBeedChainVertical[type][j].belongs = mBeedChainHorizontal[type][i].belongs;
+                                    EachBeedChainCount[type][mBeedChainVertical[type][j].belongs] += mBeedChainVertical[type][j].chainLength - 1;
+                                }
+                            }
+                            else
+                            {
+                                mBeedChainHorizontal[type][i].belongs = mBeedChainVertical[type][j].belongs;
+                                EachBeedChainCount[type][mBeedChainVertical[type][j].belongs] += mBeedChainHorizontal[type][i].chainLength - 1;
+                            }
+
+                        }
+                    }
+                }
+                mVHChain[type] = chainCount;
+            }
+        }
+
+        private void CountRemainChain()
+        {
+            for (int type = 0; type < mBeedsMaxCount; type++)
+            {
+                for (int i = 0; i < mBeedChainHorizontal[type].Count; i++)
+                {
+                    if (mBeedChainHorizontal[type][i].belongs == -1)
+                    {
+                        EachBeedChainCount[type].Add(mBeedChainHorizontal[type][i].chainLength);
+                    }
+                }
+                for (int i = 0; i < mBeedChainVertical[type].Count; i++)
+                {
+                    if (mBeedChainVertical[type][i].belongs == -1)
+                    {
+                        EachBeedChainCount[type].Add(mBeedChainVertical[type][i].chainLength);
+                    }
+                }
+            }
+
+        }
+
+        private Int32 delayMilliSecond = 350;
+        private Int32 eliminateMilliSecond = 200;
+
+        private void EliminateBeedAnimation(ScaleTransform imageTransForm, Int32 bMilliSecond)
+        {
+            DoubleAnimation animX = new DoubleAnimation();
+            animX.From = 1;
+            animX.To = 0;
+            animX.Duration = new Duration(TimeSpan.FromMilliseconds(eliminateMilliSecond));
+            DoubleAnimation animY = new DoubleAnimation();
+            animY.From = 1;
+            animY.To = 0;
+            animY.Duration = new Duration(TimeSpan.FromMilliseconds(eliminateMilliSecond));
+            Storyboard.SetTarget(animX, imageTransForm);
+            Storyboard.SetTarget(animY, imageTransForm);
+            Storyboard.SetTargetProperty(animX, new PropertyPath(ScaleTransform.ScaleXProperty));
+            Storyboard.SetTargetProperty(animY, new PropertyPath(ScaleTransform.ScaleYProperty));
+            Storyboard storyboard = new Storyboard();
+            storyboard.Children.Add(animX);
+            storyboard.Children.Add(animY);
+            storyboard.BeginTime = new TimeSpan(0, 0, 0, 0, bMilliSecond);
+            storyboard.Begin();
+        }
+        
+
+        private void EliminateBeed()
+        {
+            Int32 beginMilliSecond = 0; 
+            for (int type = 0; type < mBeedsMaxCount; type++)
+            {
+                
+                for (int i = 0; i < mBeedChainHorizontal[type].Count; i++)
+                {
+                    if (mBeedChainHorizontal[type][i].belongs == -1)
+                    {
+                        ScaleTransform imageTrans = new ScaleTransform();
+                        for (int j = mBeedChainHorizontal[type][i].startPos.Column; j < mBeedChainHorizontal[type][i].startPos.Column + mBeedChainHorizontal[type][i].chainLength; j++)
+                        {
+                            mBeedsMap[mBeedChainHorizontal[type][i].startPos.Row, j].RenderTransform = imageTrans;
+                        }
+                        EliminateBeedAnimation(imageTrans, beginMilliSecond);
+                    }
+                    beginMilliSecond += delayMilliSecond;
+                }
+                for (int i = 0; i < mBeedChainVertical[type].Count; i++)
+                {
+                    if (mBeedChainVertical[type][i].belongs == -1)
+                    {
+                        ScaleTransform imageTrans = new ScaleTransform();
+                        for (int j = mBeedChainVertical[type][i].startPos.Row; j < mBeedChainVertical[type][i].startPos.Row + mBeedChainVertical[type][i].chainLength; j++)
+                        {
+                            mBeedsMap[j, mBeedChainVertical[type][i].startPos.Column].RenderTransform = imageTrans;
+                        }
+                        EliminateBeedAnimation(imageTrans, beginMilliSecond);
+                    }
+                    beginMilliSecond += delayMilliSecond;
+                }
+                for (int belong = 0; belong < mVHChain[type]; belong++)
+                {
+                    ScaleTransform imageTrans = new ScaleTransform();
+                    for (int i = 0; i < mBeedChainHorizontal[type].Count; i++)
+                    {
+                        if (mBeedChainHorizontal[type][i].belongs == belong)
+                        {
+                            for (int j = mBeedChainHorizontal[type][i].startPos.Column; j < mBeedChainHorizontal[type][i].startPos.Column + mBeedChainHorizontal[type][i].chainLength; j++)
+                            {
+                                mBeedsMap[mBeedChainHorizontal[type][i].startPos.Row, j].RenderTransform = imageTrans;
+                            }
+                        }
+                    }
+                    for (int i = 0; i < mBeedChainVertical[type].Count; i++)
+                    {
+                        if (mBeedChainVertical[type][i].belongs == belong)
+                        {
+                            for (int j = mBeedChainVertical[type][i].startPos.Row; j < mBeedChainVertical[type][i].startPos.Row + mBeedChainVertical[type][i].chainLength; j++)
+                            {
+                                mBeedsMap[j, mBeedChainVertical[type][i].startPos.Column].RenderTransform = imageTrans;
+                            }
+                        }
+                    }
+                    EliminateBeedAnimation(imageTrans, beginMilliSecond);
+                    beginMilliSecond += delayMilliSecond;
                 }
             }
         }
 
-        private void EliminateBeed()
+        private void StartEliminateBeed()
         {
-            //Thread.Sleep(2000);
+            FindBeedChainHorizontal();
+            FindBeedChainVertical();
+            FindIntersectionHV();
+            CountRemainChain();
+            EliminateBeed();
             ManipulationComplete = Visibility.Collapsed;
         }
 
@@ -428,7 +652,7 @@ namespace KKTOS
             TimerStart = true;
             CountDown = CountDownSecond;
             ManipulationComplete = Visibility.Visible;
-            EliminateBeed();
+            StartEliminateBeed();
             TosSpace.Children.Remove(cursorImage);
         }
 
