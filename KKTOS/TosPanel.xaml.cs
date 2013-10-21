@@ -760,7 +760,7 @@ namespace KKTOS
                     {
                         fallCounts++;
                     }
-                    else if (fallCounts != 0)
+                    else if (fallCounts != 0 && mVirtualMap[row + 1, col] == -1)
                     {
                         mEachBeedFallCountMap[col].Add(fallCounts);
                     }
