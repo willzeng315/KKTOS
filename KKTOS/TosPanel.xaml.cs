@@ -110,6 +110,17 @@ namespace KKTOS
         public Int32 belongs;
     }
 
+    public class BeedFall
+    {
+        public BeedFall()
+        {
+            Pos = new Position();
+            FallCount = 0;
+        }
+        public Position Pos;
+        public Int32 FallCount;
+    }
+
     public partial class TosPanel : UserControl, INotifyPropertyChanged
     {
         #region OnPropertyChanged
@@ -146,6 +157,7 @@ namespace KKTOS
         private Position mPosPrevious = new Position(-1, -1);
         private Position mPosCurrent = new Position(-1, -1);
         private Int32[,] mVirtualMap = new Int32[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT];
+        private Int32[,] mFallCountMap = new Int32[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT];
         private Position[,] mVisualMap = new Position[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT];
         private Image[,] mBeedsMap = new Image[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT]; // 記下每個格子的圖片
         private Double offsetX;
@@ -165,8 +177,10 @@ namespace KKTOS
         private List<List<BeedChain>> mBeedChainHorizontal;
         private List<List<BeedChain>> mBeedChainVertical;
         public List<List<Int32>> EachBeedChainCount;
+        private List<List<Int32>> mEachBeedFallCountMap;
         private Int32[] mVHChain = new Int32[mBeedsMaxCount];
         private List<Boolean> mIsBeedChecked;
+        private List<BeedFall> mBeedFallCollection = new List<BeedFall>();
 
 
         public Int32 test;
@@ -196,8 +210,10 @@ namespace KKTOS
             InitBeedImages();
             InitMapPosition();
             InitVirtualMap();
+            ResetFallCountMap();
             CreateBeedsMap();
             InitBeedsMap();
+            InitEachBeedFallCountMap();
         }
 
         public TosPanel()
@@ -223,6 +239,16 @@ namespace KKTOS
                 StartEliminateBeed();
             }
             Debug.WriteLine(CountDown);
+        }
+
+        private void InitEachBeedFallCountMap()
+        {
+            mEachBeedFallCountMap = new List<List<Int32>>();
+            for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
+            {
+                List<Int32> nullBeedFallCount = new List<Int32>();
+                mEachBeedFallCountMap.Add(nullBeedFallCount);
+            }
         }
 
         private void InitBeedChainSet()
@@ -287,6 +313,18 @@ namespace KKTOS
         /// <summary>
         /// 將每個格子記錄的種子類型清空
         /// </summary>
+        /// 
+        private void ResetFallCountMap()
+        {
+            for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
+            {
+                for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
+                {
+                    mFallCountMap[row, col] = 0;
+                }
+            }
+        }
+
         private void InitVirtualMap()
         {
             for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
@@ -441,7 +479,6 @@ namespace KKTOS
 
                 }
             }
-        
         }
 
         private void FindIntersectionHV()
@@ -535,14 +572,13 @@ namespace KKTOS
             storyboard.BeginTime = new TimeSpan(0, 0, 0, 0, bMilliSecond);
             storyboard.Begin();
         }
-        
+
 
         private void EliminateBeed()
         {
-            Int32 beginMilliSecond = 0; 
+            Int32 beginMilliSecond = 0;
             for (int type = 0; type < mBeedsMaxCount; type++)
             {
-                
                 for (int i = 0; i < mBeedChainHorizontal[type].Count; i++)
                 {
                     if (mBeedChainHorizontal[type][i].belongs == -1)
@@ -551,6 +587,7 @@ namespace KKTOS
                         for (int j = mBeedChainHorizontal[type][i].startPos.Column; j < mBeedChainHorizontal[type][i].startPos.Column + mBeedChainHorizontal[type][i].chainLength; j++)
                         {
                             mBeedsMap[mBeedChainHorizontal[type][i].startPos.Row, j].RenderTransform = imageTrans;
+                            mVirtualMap[mBeedChainHorizontal[type][i].startPos.Row, j] = -1;
                         }
                         EliminateBeedAnimation(imageTrans, beginMilliSecond);
                     }
@@ -564,6 +601,7 @@ namespace KKTOS
                         for (int j = mBeedChainVertical[type][i].startPos.Row; j < mBeedChainVertical[type][i].startPos.Row + mBeedChainVertical[type][i].chainLength; j++)
                         {
                             mBeedsMap[j, mBeedChainVertical[type][i].startPos.Column].RenderTransform = imageTrans;
+                            mVirtualMap[j, mBeedChainVertical[type][i].startPos.Column] = -1;
                         }
                         EliminateBeedAnimation(imageTrans, beginMilliSecond);
                     }
@@ -579,6 +617,7 @@ namespace KKTOS
                             for (int j = mBeedChainHorizontal[type][i].startPos.Column; j < mBeedChainHorizontal[type][i].startPos.Column + mBeedChainHorizontal[type][i].chainLength; j++)
                             {
                                 mBeedsMap[mBeedChainHorizontal[type][i].startPos.Row, j].RenderTransform = imageTrans;
+                                mVirtualMap[mBeedChainHorizontal[type][i].startPos.Row, j] = -1;
                             }
                         }
                     }
@@ -589,6 +628,7 @@ namespace KKTOS
                             for (int j = mBeedChainVertical[type][i].startPos.Row; j < mBeedChainVertical[type][i].startPos.Row + mBeedChainVertical[type][i].chainLength; j++)
                             {
                                 mBeedsMap[j, mBeedChainVertical[type][i].startPos.Column].RenderTransform = imageTrans;
+                                mVirtualMap[j, mBeedChainVertical[type][i].startPos.Column] = -1;
                             }
                         }
                     }
@@ -598,14 +638,133 @@ namespace KKTOS
             }
         }
 
+        private void MoveRemainBeeds(List<Position> mPath)
+        {
+            Position posSource = mPath[0];
+            int nSourceRow = (int)posSource.Row;
+            int nSourceColumn = (int)posSource.Column;
+            int nSourcePositionX = (int)mVisualMap[nSourceRow, nSourceColumn].X - BLOCK_RADIUS;
+            int nSourcePositionY = (int)mVisualMap[nSourceRow, nSourceColumn].Y - BLOCK_RADIUS;
+
+            PointAnimationUsingKeyFrames frames = new PointAnimationUsingKeyFrames();
+            Double dblSeconePosition = 0.0;
+            for (int i = 0; i < mPath.Count; ++i)
+            {
+                KeyTime kTime = KeyTime.FromTimeSpan(TimeSpan.FromSeconds(dblSeconePosition));
+                Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
+                Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
+                frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
+                dblSeconePosition += 1;
+            }
+
+
+            Image testImage = new Image();
+            testImage.Source = mBeedsMap[nSourceRow,nSourceColumn].Source;
+            CompositeTransform imageComposite = new CompositeTransform();
+            testImage.RenderTransform = imageComposite;
+
+            //RectangleGeometry image = new RectangleGeometry();
+            Storyboard.SetTarget(frames, imageComposite);
+            Storyboard.SetTargetProperty(frames, new PropertyPath(CompositeTransform.TranslateYProperty));
+            Storyboard storyboard = new Storyboard();
+            storyboard.Children.Add(frames);
+            //image.fill
+            // 把 EllipseGeometry 貼上正確的圖片並秀出來、移到正確的位置
+            //RoleBeanElement.Fill = new ImageBrush() { ImageSource = GetBeanImagePath(beanType) };
+            //Canvas.SetLeft(RoleBeanElement, mVisualMap[nSourceRow, nSourceColumn].X);
+            //Canvas.SetTop(RoleBeanElement, mVisualMap[nSourceRow, nSourceColumn].Y);
+            // 把原本在底下的圖片清掉
+            //mBeansMap[nSourceRow, nSourceColumn].Source = null;
+
+            // 開始跑
+            //mAnimationRunning = true;
+            storyboard.Begin();
+        }
+
+        private void ComputeEachBeedFallCount()
+        {
+            for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
+            {
+                Int32 ignoreLen = 0;
+                Int32 count = 0;
+                for (int row = BLOCK_ROW_COUNT - 2; row >= 0; --row)
+                {
+                    if (ignoreLen > 1)
+                    {
+                        ignoreLen--;
+                        continue;
+                    }
+                    
+                    if (mVirtualMap[row + 1, col] == -1 && mVirtualMap[row, col] != -1)
+                    {
+                        for (int i = row; i >= 0; --i)
+                        {
+                            if (mVirtualMap[i, col] != -1)
+                            {
+                                ignoreLen++;
+                                mBeedFallCollection.Add(new BeedFall()
+                                {
+                                    Pos = new Position(i, col),
+                                    FallCount = mEachBeedFallCountMap[col][count]
+                                });
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        if (ignoreLen == 1)
+                        {
+                            ignoreLen = 0;
+                        }
+                        count++;
+                    }
+                }
+            }
+            for (int i = 0; i < mBeedFallCollection.Count; i++)
+            {
+                Debug.WriteLine(String.Format("{0},{1}  {2}", mBeedFallCollection[i].Pos.Row, mBeedFallCollection[i].Pos.Column, mBeedFallCollection[i].FallCount));
+            }
+            Debug.WriteLine(mBeedFallCollection.Count);
+        }
+
+        private void CheckBeedBoardHoles()
+        {
+            for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
+            {
+                Int32 fallCounts = 0;
+                for (int row = BLOCK_ROW_COUNT - 1; row >= 0; --row)
+                {
+                    if (mVirtualMap[row, col] == -1)
+                    {
+                        fallCounts++;
+                    }
+                    else if (fallCounts != 0)
+                    {
+                        mEachBeedFallCountMap[col].Add(fallCounts);
+                    }
+                    if (row == 0 && mVirtualMap[row, col] == -1)
+                    {
+                        mEachBeedFallCountMap[col].Add(fallCounts);
+                    }
+                }
+            }
+        }
+
         private void StartEliminateBeed()
         {
+            ManipulationComplete = Visibility.Collapsed;
             FindBeedChainHorizontal();
             FindBeedChainVertical();
             FindIntersectionHV();
             CountRemainChain();
             EliminateBeed();
-            ManipulationComplete = Visibility.Collapsed;
+            CheckBeedBoardHoles();
+            ComputeEachBeedFallCount();
+            List<Position> mPath = new List<Position>();
+            mPath.Add(mBeedFallCollection[0].Pos);
+            mPath.Add(new Position(mBeedFallCollection[0].Pos.Row + mBeedFallCollection[0].FallCount, mBeedFallCollection[0].Pos.Column));
+            MoveRemainBeeds(mPath);
         }
 
         private void OnTosPanelManipulationStarted(Object sender, System.Windows.Input.ManipulationStartedEventArgs e)
