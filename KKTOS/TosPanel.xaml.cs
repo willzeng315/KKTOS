@@ -149,8 +149,8 @@ namespace KKTOS
         }
         #endregion
 
-        private const Int32 BLOCK_ROW_COUNT = 5;
-        private const Int32 BLOCK_COLUMN_COUNT = 6;
+        private const Int32 BLOCK_ROW_COUNT = 7;
+        private const Int32 BLOCK_COLUMN_COUNT = 8;
         private const Int32 MIN_CHAIN_LEN = 3;
         private Int32 BLOCK_SIZE;
         private Int32 BLOCK_RADIUS;
@@ -166,7 +166,7 @@ namespace KKTOS
         private BitmapImage[] beedImages;
         private const Int32 mBeedsMaxCount = 5;
         private DispatcherTimer Timer;
-        private const Int32 CountDownSecond = 20;
+        
         private Int32 CountDown = CountDownSecond;
         private Image cursorImage;
         private UInt32 cursorShift = 20;
@@ -180,11 +180,20 @@ namespace KKTOS
         private Boolean mIsBeedMoved = false;
         private Boolean mTimerStart = true;
         private Boolean mFirstClick = true;
+        private Boolean mTimeOutComplete = false;
         private const Int32 delayPlayMilliSecond = 350;
         private const Int32 eliminateMilliSecond = 200;
         private Int32 mEliminateBeedCount = 0;
+        private const Double mFallMilliSecond = 0.5;
+        
 
+
+        public const Int32 CountDownSecond = 5;
         public List<List<Int32>> EachBeedChainCount;
+        public Int32 mComboCount = 0;
+
+        public delegate void ComboHandler(Int32 combo);
+        public ComboHandler ComboCompleted = null;
 
         private Visibility manipulationComplete;
         public Visibility ManipulationComplete
@@ -203,7 +212,7 @@ namespace KKTOS
         {
             Debug.WriteLine("OnUserControlLoaded");
             Debug.WriteLine(LayoutRoot.ActualWidth);
-            BLOCK_SIZE = (Int32)(LayoutRoot.ActualWidth / 6.0);
+            BLOCK_SIZE = (Int32)(LayoutRoot.ActualWidth / BLOCK_COLUMN_COUNT);
             BLOCK_RADIUS = (BLOCK_SIZE / 2);
 
             TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
@@ -235,8 +244,10 @@ namespace KKTOS
             CountDown--;
             if (CountDown == 0)
             {
+                mTimeOutComplete = true;
+                Debug.WriteLine("OnTimerTick");
                 ManipulationComplete = Visibility.Visible;
-                StartEliminateBeed();
+                ManipulationCompletedState();
             }
             Debug.WriteLine(CountDown);
         }
@@ -282,7 +293,6 @@ namespace KKTOS
                 mEachBeedFallCountMap[col].Clear();
             }
             mBeedFallCollection.Clear();
-            mIsMoveNewBeed = false;
             animationBeginMilliSecond = 0;
         }
 
@@ -301,7 +311,6 @@ namespace KKTOS
 
         private void CreateBeedsMap()
         {
-            // 把 mBeansMap 依 mVisualMap 的座標排好
             for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
             {
                 for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
@@ -406,8 +415,9 @@ namespace KKTOS
             return ptRes;
         }
 
-        private void FindBeedChainHorizontal()
+        private Boolean FindBeedChainHorizontal()
         {
+            Boolean hasBeedChain = false;
             for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
             {
                 Int32 LastLength = 0;
@@ -439,14 +449,17 @@ namespace KKTOS
                         beedChain.startPos = new Position(row, col);
                         beedChain.chainLength = chainLength;
                         mBeedChainHorizontal[type - 1].Add(beedChain);
+                        hasBeedChain = true;
                     }
 
                 }
             }
+            return hasBeedChain;
         }
 
-        private void FindBeedChainVertical()
+        private Boolean FindBeedChainVertical()
         {
+            Boolean hasBeedChain = false;
             for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
             {
                 Int32 LastLength = 0;
@@ -478,10 +491,12 @@ namespace KKTOS
                         beedChain.startPos = new Position(row, col);
                         beedChain.chainLength = chainLength;
                         mBeedChainVertical[type - 1].Add(beedChain);
+                        hasBeedChain = true;
                     }
 
                 }
             }
+            return hasBeedChain;
         }
 
         private void FindIntersectionHV()
@@ -573,17 +588,23 @@ namespace KKTOS
             storyboard.Begin();
             storyboard.Completed += OnEliminateBeedCompleted;
             mEliminateBeedCount++;
-            Debug.WriteLine(String.Format("mEliminateBeedCount = {0}", mEliminateBeedCount));
         }
 
         private void OnEliminateBeedCompleted(Object sender, EventArgs e)
         {
+
+            mComboCount++;
             mEliminateBeedCount--;
             if (mEliminateBeedCount == 0)
             {
                 FallOriginalBeeds();
                 FallNewBeeds();
                 Debug.WriteLine("OnEliminateBeedCompleted");
+            }
+            Debug.WriteLine("{0} Combo! ", mComboCount);
+            if (ComboCompleted != null)
+            {
+                ComboCompleted(mComboCount);
             }
         }
 
@@ -602,9 +623,11 @@ namespace KKTOS
                             mVirtualMap[mBeedChainHorizontal[type][i].startPos.Row, j] = -1;
                         }
                         EliminateBeedAnimation(imageTrans, animationBeginMilliSecond);
+                        animationBeginMilliSecond += delayPlayMilliSecond;
                     }
-                    animationBeginMilliSecond += delayPlayMilliSecond;
+
                 }
+
                 for (int i = 0; i < mBeedChainVertical[type].Count; i++)
                 {
                     if (mBeedChainVertical[type][i].belongs == -1)
@@ -616,9 +639,11 @@ namespace KKTOS
                             mVirtualMap[j, mBeedChainVertical[type][i].startPos.Column] = -1;
                         }
                         EliminateBeedAnimation(imageTrans, animationBeginMilliSecond);
+                        animationBeginMilliSecond += delayPlayMilliSecond;
                     }
-                    animationBeginMilliSecond += delayPlayMilliSecond;
+
                 }
+
                 for (int belong = 0; belong < mVHChain[type]; belong++)
                 {
                     ScaleTransform imageTrans = new ScaleTransform();
@@ -650,8 +675,6 @@ namespace KKTOS
             }
         }
 
-        private Boolean mIsMoveNewBeed = false;
-
         private void MoveOriginalBeeds(List<Position> mPath)
         {
             Position posSource = mPath[0];
@@ -668,7 +691,7 @@ namespace KKTOS
                 Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
                 Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
                 frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
-                dblSeconePosition += 0.5;
+                dblSeconePosition += mFallMilliSecond;
             }
 
             Path RoleBeedElement = new Path();
@@ -692,18 +715,7 @@ namespace KKTOS
 
             mBeedsMap[nSourceRow, nSourceColumn].Source = null;
 
-            storyboard.Completed += OnMoveOriginalBeedsCompleted;
-            //storyboard.BeginTime = new TimeSpan(0, 0, 0, 0, animationBeginMilliSecond + 200);
             storyboard.Begin();
-        }
-
-        private void OnMoveOriginalBeedsCompleted(Object sender, EventArgs e)
-        {
-            if (mIsMoveNewBeed == false)
-            {
-                //FallNewBeeds();
-                mIsMoveNewBeed = true;
-            }
         }
 
         private void ComputeEachBeedFallCount()
@@ -746,11 +758,11 @@ namespace KKTOS
                     }
                 }
             }
-            for (int i = 0; i < mBeedFallCollection.Count; i++)
-            {
-                Debug.WriteLine(String.Format("{0},{1}  {2}", mBeedFallCollection[i].Pos.Row, mBeedFallCollection[i].Pos.Column, mBeedFallCollection[i].FallCount));
-            }
-            Debug.WriteLine(mBeedFallCollection.Count);
+            //for (int i = 0; i < mBeedFallCollection.Count; i++)
+            //{
+            //    Debug.WriteLine(String.Format("{0},{1}  {2}", mBeedFallCollection[i].Pos.Row, mBeedFallCollection[i].Pos.Column, mBeedFallCollection[i].FallCount));
+            //}
+            //Debug.WriteLine(mBeedFallCollection.Count);
         }
 
         private void CheckBeedBoardHoles()
@@ -813,7 +825,7 @@ namespace KKTOS
                 Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
                 Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
                 frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
-                dblSeconePosition += 0.8;
+                dblSeconePosition += mFallMilliSecond;
             }
 
             Path RoleBeedElement = new Path();
@@ -835,9 +847,7 @@ namespace KKTOS
             Canvas.SetTop(RoleBeedElement, -mVisualMap[mPath[2].Row, mPath[2].Column].Y);
             TosSpace.Children.Add(RoleBeedElement);
 
-
             storyboard.Completed += OnMoveNewBeedsCompleted;
-            //storyboard.BeginTime = new TimeSpan(0, 0, 0, 0, animationBeginMilliSecond); ;
             storyboard.Begin();
             mMoveNewBeedCount++;
         }
@@ -879,25 +889,19 @@ namespace KKTOS
 
         private void StartEliminateBeed()
         {
-            ManipulationComplete = Visibility.Collapsed;
-            FindBeedChainHorizontal();
-            FindBeedChainVertical();
+            Boolean haveHorizontalChain = FindBeedChainHorizontal();
+            Boolean haveVerticalChain = FindBeedChainVertical();
             FindIntersectionHV();
             CountRemainChain();
             EliminateBeed();
             CheckBeedBoardHoles();
             ComputeEachBeedFallCount();
 
-            for (int col = 0; col < BLOCK_COLUMN_COUNT; col++)
+            ManipulationComplete = Visibility.Visible;
+
+            if (haveVerticalChain == false && haveHorizontalChain == false)
             {
-                if (mEachBeedFallCountMap[col].Count > 0)
-                {
-                    Debug.WriteLine("{0}, new = {1}", col, mEachBeedFallCountMap[col][mEachBeedFallCountMap[col].Count - 1]);
-                }
-                else
-                {
-                    Debug.WriteLine("{0}, new = {1}", col, 0);
-                }
+                ManipulationComplete = Visibility.Collapsed;
             }
         }
 
@@ -906,12 +910,24 @@ namespace KKTOS
             offsetPoint = new Point(offsetX - e.ManipulationOrigin.X, offsetY - e.ManipulationOrigin.Y);
         }
 
+        private void ClearOutputParameter()
+        {
+            for (int i = 0; i < mBeedsMaxCount; i++)
+            {
+                EachBeedChainCount[i].Clear();
+            }
+            mComboCount = 0;
+        }
+
         private void OnTosPanelMouseEnter(Object sender, System.Windows.Input.MouseEventArgs e)
         {
             Debug.WriteLine("OnTosPanelMouseEnter");
 
             if (mFirstClick == false)
             {
+                ClearOutputParameter();
+                CountDown = CountDownSecond;
+                mTimeOutComplete = false;
                 GetCoordinate(e.GetPosition(TosSpace));
                 offsetX = e.GetPosition(TosSpace).X;
                 offsetY = e.GetPosition(TosSpace).Y;
@@ -946,10 +962,11 @@ namespace KKTOS
 
         private void ManipulationCompletedState()
         {
+            RemovedCursor();
             TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
             Timer.Stop();
             mTimerStart = true;
-            CountDown = CountDownSecond;
+            
             ManipulationComplete = Visibility.Visible;
             StartEliminateBeed();
         }
@@ -959,32 +976,35 @@ namespace KKTOS
             Debug.WriteLine("OnTosPanelManipulationCompleted");
             if (mFirstClick == false)
             {
-                if (mIsBeedMoved)
+                if (mIsBeedMoved && mTimeOutComplete == false)
                 {
-                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = cursorImage.Source;
-                    TosSpace.Children.Remove(cursorImage);
                     ManipulationCompletedState();
                     Debug.WriteLine("TimerStop");
                 }
                 else if (cursorImage != null)
                 {
-                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = cursorImage.Source;
-                    TosSpace.Children.Remove(cursorImage);
+                    RemovedCursor();
                 }
             }
             mFirstClick = false;
             mIsBeedMoved = false;
         }
 
+        private void RemovedCursor()
+        {
+            mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = cursorImage.Source;
+            TosSpace.Children.Remove(cursorImage);
+        }
+
         private void OnTosPanelManipulationDelta(Object sender, System.Windows.Input.ManipulationDeltaEventArgs e)
         {
             if (CountDown <= 0)
             {
-                ManipulationCompletedState();
+                Debug.WriteLine("CountDown <= 0");
+                //ManipulationCompletedState();
             }
-            else if (cursorImage != null)
+            else
             {
-
                 Point realPoint = new Point(offsetPoint.X + e.ManipulationOrigin.X, offsetPoint.Y + e.ManipulationOrigin.Y);
                 GetCoordinate(realPoint);
 

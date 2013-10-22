@@ -18,11 +18,17 @@ namespace KKTOS
         public MainPage()
         {
             InitializeComponent();
+            beedPanel.ComboCompleted += OnComboCompleted;
+        }
 
+        private void OnComboCompleted(Int32 combo)
+        {
+            ComboText.Text = String.Format("{0} Combo !!", combo);
         }
 
         private void beedPanel1_ManipulationStarted(object sender, System.Windows.Input.ManipulationStartedEventArgs e)
         {
+
             
         }
     }
