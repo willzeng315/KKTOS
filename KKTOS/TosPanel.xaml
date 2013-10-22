@@ -25,9 +25,9 @@
                 ManipulationDelta= "OnTosPanelManipulationDelta" 
                 ManipulationCompleted="OnTosPanelManipulationCompleted"
                 Background="RosyBrown">
-            <!--<Path x:Name="RoleBeanElement">
+            <!--<Path x:Name="RoleBeedElement">
                 <Path.Data>
-                    <EllipseGeometry Center="24 24" x:Name="RoleBean" RadiusX="24" RadiusY="24" />
+                    <EllipseGeometry x:Name="RoleBeed"  />
                 </Path.Data>
             </Path>-->
         </Canvas>

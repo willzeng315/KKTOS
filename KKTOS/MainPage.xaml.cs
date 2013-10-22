@@ -14,17 +14,11 @@ namespace KKTOS
 {
     public partial class MainPage : PhoneApplicationPage
     {
-        private List<List<Int32>> colorBeedCollection;
         // 建構函式
         public MainPage()
         {
             InitializeComponent();
-            Debug.WriteLine("MainPage");
 
-            for (int i = 100; i < 10; i++)
-            {
-                Debug.WriteLine(i);
-            }
         }
 
         private void beedPanel1_ManipulationStarted(object sender, System.Windows.Input.ManipulationStartedEventArgs e)
