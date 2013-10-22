@@ -23,7 +23,7 @@ namespace KKTOS
 
         private void beedPanel1_ManipulationStarted(object sender, System.Windows.Input.ManipulationStartedEventArgs e)
         {
-            Debug.WriteLine(beedPanel.test);
+            
         }
     }
 }
