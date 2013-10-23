@@ -25,11 +25,6 @@
                 ManipulationDelta= "OnTosPanelManipulationDelta" 
                 ManipulationCompleted="OnTosPanelManipulationCompleted"
                 Background="RosyBrown">
-            <!--<Path x:Name="RoleBeedElement">
-                <Path.Data>
-                    <EllipseGeometry x:Name="RoleBeed"  />
-                </Path.Data>
-            </Path>-->
         </Canvas>
         <Rectangle Grid.Row="1" Fill="Black" Width="450" Height="450" Opacity="0.5" Visibility="{Binding ManipulationComplete}"/>
     </Grid>

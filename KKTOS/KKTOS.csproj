@@ -153,6 +153,7 @@
     <Content Include="Image\bead003.png" />
     <Content Include="Image\bead004.png" />
     <Content Include="Image\bead005.png" />
+    <Content Include="Image\bead006.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\AppResources.resx">

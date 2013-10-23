@@ -22,7 +22,7 @@ namespace KKTOS
     public class Position
     {
         private Int32 row = -1;
-        private Int32 column = -1;
+        private Int32 col = -1;
 
         public static Position Empty
         {
@@ -44,15 +44,15 @@ namespace KKTOS
             }
         }
 
-        public Int32 Column
+        public Int32 Col
         {
             get
             {
-                return column;
+                return col;
             }
             set
             {
-                column = value;
+                col = value;
             }
         }
 
@@ -72,11 +72,11 @@ namespace KKTOS
         {
             get
             {
-                return column;
+                return col;
             }
             set
             {
-                column = value;
+                col = value;
             }
         }
 
@@ -87,13 +87,13 @@ namespace KKTOS
         public Position(Int32 r, Int32 c)
         {
             row = r;
-            column = c;
+            col = c;
         }
 
         public Position(Position pos)
         {
             row = pos.row;
-            column = pos.column;
+            col = pos.col;
         }
     }
 
@@ -152,6 +152,7 @@ namespace KKTOS
         private const Int32 BLOCK_ROW_COUNT = 7;
         private const Int32 BLOCK_COLUMN_COUNT = 8;
         private const Int32 MIN_CHAIN_LEN = 3;
+        private const Int32 mBeedsMaxCount = 6;
         private Int32 BLOCK_SIZE;
         private Int32 BLOCK_RADIUS;
         private const String BEED_PATH_TEMPLATE = "Image/bead00{0}.png";
@@ -159,17 +160,15 @@ namespace KKTOS
         private Position mPosCurrent = new Position(-1, -1);
         private Int32[,] mVirtualMap = new Int32[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT];
         private Position[,] mVisualMap = new Position[BLOCK_ROW_COUNT + 1, BLOCK_COLUMN_COUNT];
-        private Image[,] mBeedsMap = new Image[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT]; // 記下每個格子的圖片
+        private Image[,] mBeedsMap = new Image[BLOCK_ROW_COUNT, BLOCK_COLUMN_COUNT];
         private Double offsetX;
         private Double offsetY;
         private Point offsetPoint;
         private BitmapImage[] beedImages;
-        private const Int32 mBeedsMaxCount = 5;
         private DispatcherTimer Timer;
-        
-        private Int32 CountDown = CountDownSecond;
-        private Image cursorImage;
-        private UInt32 cursorShift = 20;
+        private Int32 mCountDown = CountDownSecond;
+        private Image mCursorImage;
+        private Int32 mCursorShift = 20;
         private Random mRandom = new Random();
         private List<List<BeedChain>> mBeedChainHorizontal;
         private List<List<BeedChain>> mBeedChainVertical;
@@ -181,14 +180,14 @@ namespace KKTOS
         private Boolean mTimerStart = true;
         private Boolean mFirstClick = true;
         private Boolean mTimeOutComplete = false;
-        private const Int32 delayPlayMilliSecond = 350;
-        private const Int32 eliminateMilliSecond = 200;
+        private const Int32 mDelayPlayMilliSecond = 350;
+        private const Int32 mDliminateMilliSecond = 250;
         private Int32 mEliminateBeedCount = 0;
         private const Double mFallMilliSecond = 0.5;
-        
+        private Storyboard mTimeBarStoryBoard;
 
 
-        public const Int32 CountDownSecond = 5;
+        public const Int32 CountDownSecond = 20;
         public List<List<Int32>> EachBeedChainCount;
         public Int32 mComboCount = 0;
 
@@ -211,11 +210,12 @@ namespace KKTOS
         private void OnUserControlLoaded(object sender, RoutedEventArgs e)
         {
             Debug.WriteLine("OnUserControlLoaded");
-            Debug.WriteLine(LayoutRoot.ActualWidth);
-            BLOCK_SIZE = (Int32)(LayoutRoot.ActualWidth / BLOCK_COLUMN_COUNT);
+            Debug.WriteLine(String.Format("ActualWidth = {0}", TosSpace.ActualWidth));
+            Debug.WriteLine(String.Format("ActualHeight = {0}", TosSpace.ActualHeight));
+            BLOCK_SIZE = Math.Min((Int32)(TosSpace.ActualWidth / (Double)BLOCK_COLUMN_COUNT), (Int32)(TosSpace.ActualHeight / (Double)BLOCK_ROW_COUNT));
             BLOCK_RADIUS = (BLOCK_SIZE / 2);
 
-            TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
+            TimeLineBar.Width = (Int32)(TosSpace.ActualWidth);
             InitBeedChainSet();
             InitBeedImages();
             InitMapPosition();
@@ -223,6 +223,48 @@ namespace KKTOS
             CreateBeedsMap();
             InitBeedsMap();
             InitEachBeedFallCountMap();
+        }
+
+        public void ChangeBeedColor(Int32 SourceType, Int32 TargetType)
+        {
+            ScaleTransform imageTrans = new ScaleTransform();
+            for (int row = 0; row < BLOCK_ROW_COUNT; ++row)
+            {
+                for (int col = 0; col < BLOCK_COLUMN_COUNT; ++col)
+                {
+                    if (mVirtualMap[row, col] == SourceType)
+                    {
+                        mVirtualMap[row, col] = TargetType;
+                        mBeedsMap[row, col].RenderTransform = imageTrans;
+                        ChangeBeedColorAnimation(imageTrans, 1, 0);
+                        mBeedsMap[row, col].Source = GetBeedImage(mVirtualMap[row, col]);
+                        mBeedsMap[row, col].RenderTransform = imageTrans;
+                        ChangeBeedColorAnimation(imageTrans, 0, 1);
+                    }
+                }
+            }
+        }
+
+        private void ChangeBeedColorAnimation(ScaleTransform imageTransForm, Int32 from, Int32 to)
+        {
+            DoubleAnimation animX = new DoubleAnimation();
+            animX.From = from;
+            animX.To = to;
+            animX.Duration = new Duration(TimeSpan.FromMilliseconds(mDliminateMilliSecond));
+            DoubleAnimation animY = new DoubleAnimation();
+            animY.From = from;
+            animY.To = to;
+            animY.Duration = new Duration(TimeSpan.FromMilliseconds(mDliminateMilliSecond));
+            Storyboard.SetTarget(animX, imageTransForm);
+            Storyboard.SetTarget(animY, imageTransForm);
+            Storyboard.SetTargetProperty(animX, new PropertyPath(ScaleTransform.ScaleXProperty));
+            Storyboard.SetTargetProperty(animY, new PropertyPath(ScaleTransform.ScaleYProperty));
+            Storyboard storyboard = new Storyboard();
+            storyboard.Children.Add(animX);
+            storyboard.Children.Add(animY);
+            storyboard.Begin();
+            storyboard.Completed += OnEliminateBeedCompleted;
+            mEliminateBeedCount++;
         }
 
         public TosPanel()
@@ -234,22 +276,33 @@ namespace KKTOS
             Timer.Interval = TimeSpan.FromSeconds(1);
             Timer.Tick += OnTimerTick;
             DataContext = this;
-
         }
 
         private void OnTimerTick(Object sender, EventArgs e)
         {
-            Debug.WriteLine(CountDown);
-            //TimeLineBar.Width -= 50;
-            CountDown--;
-            if (CountDown == 0)
+            mCountDown--;
+            if (mCountDown == 0)
             {
                 mTimeOutComplete = true;
                 Debug.WriteLine("OnTimerTick");
                 ManipulationComplete = Visibility.Visible;
                 ManipulationCompletedState();
             }
-            Debug.WriteLine(CountDown);
+        }
+
+        private void TimeLineBarAnimation(Int32 shrinkSeconds)
+        {
+            DoubleAnimation animX = new DoubleAnimation();
+            animX.From = 1;
+            animX.To = 0;
+            animX.Duration = new Duration(TimeSpan.FromSeconds(shrinkSeconds));
+            ScaleTransform timeBarTrans = new ScaleTransform();
+            TimeLineBar.RenderTransform = timeBarTrans;
+            Storyboard.SetTarget(animX, timeBarTrans);
+            Storyboard.SetTargetProperty(animX, new PropertyPath(ScaleTransform.ScaleXProperty));
+            mTimeBarStoryBoard = new Storyboard();
+            mTimeBarStoryBoard.Children.Add(animX);
+            mTimeBarStoryBoard.Begin();
         }
 
         private void InitEachBeedFallCountMap()
@@ -370,8 +423,8 @@ namespace KKTOS
 
         private void InitBeedImages()
         {
-            beedImages = new BitmapImage[5];
-            for (int i = 0; i < 5; i++)
+            beedImages = new BitmapImage[mBeedsMaxCount];
+            for (int i = 0; i < mBeedsMaxCount; i++)
             {
                 String strPath = String.Format(BEED_PATH_TEMPLATE, i + 1);
                 beedImages[i] = new BitmapImage(new Uri(strPath, UriKind.Relative));
@@ -380,7 +433,7 @@ namespace KKTOS
 
         private BitmapImage GetBeedImage(Int32 type)
         {
-            return beedImages[type - 1];
+            return type >= 0 ? beedImages[type - 1] : null;
         }
 
         private Position GetCoordinate(Point pt)
@@ -400,7 +453,7 @@ namespace KKTOS
                     if (pt.X >= nLeft && pt.Y >= nTop && pt.X <= nRight && pt.Y <= nBottom)
                     {
                         mPosCurrent.Row = row;
-                        mPosCurrent.Column = col;
+                        mPosCurrent.Col = col;
                         ptRes = mVisualMap[row, col];
                         bFind = true;
                         break;
@@ -511,10 +564,10 @@ namespace KKTOS
                     {
                         Int32 vStartRow = mBeedChainVertical[type][j].startPos.Row;
                         Int32 vEndRow = mBeedChainVertical[type][j].startPos.Row + mBeedChainVertical[type][j].chainLength - 1;
-                        Int32 hStartCol = mBeedChainHorizontal[type][i].startPos.Column;
-                        Int32 hEndCol = mBeedChainHorizontal[type][i].startPos.Column + mBeedChainHorizontal[type][i].chainLength - 1;
+                        Int32 hStartCol = mBeedChainHorizontal[type][i].startPos.Col;
+                        Int32 hEndCol = mBeedChainHorizontal[type][i].startPos.Col + mBeedChainHorizontal[type][i].chainLength - 1;
 
-                        if (hStartCol <= mBeedChainVertical[type][j].startPos.Column && mBeedChainVertical[type][j].startPos.Column <= hEndCol
+                        if (hStartCol <= mBeedChainVertical[type][j].startPos.Col && mBeedChainVertical[type][j].startPos.Col <= hEndCol
                             && vStartRow <= mBeedChainHorizontal[type][i].startPos.Row && mBeedChainHorizontal[type][i].startPos.Row <= vEndRow)
                         {
                             if (mBeedChainVertical[type][j].belongs == -1)
@@ -572,11 +625,11 @@ namespace KKTOS
             DoubleAnimation animX = new DoubleAnimation();
             animX.From = 1;
             animX.To = 0;
-            animX.Duration = new Duration(TimeSpan.FromMilliseconds(eliminateMilliSecond));
+            animX.Duration = new Duration(TimeSpan.FromMilliseconds(mDliminateMilliSecond));
             DoubleAnimation animY = new DoubleAnimation();
             animY.From = 1;
             animY.To = 0;
-            animY.Duration = new Duration(TimeSpan.FromMilliseconds(eliminateMilliSecond));
+            animY.Duration = new Duration(TimeSpan.FromMilliseconds(mDliminateMilliSecond));
             Storyboard.SetTarget(animX, imageTransForm);
             Storyboard.SetTarget(animY, imageTransForm);
             Storyboard.SetTargetProperty(animX, new PropertyPath(ScaleTransform.ScaleXProperty));
@@ -592,7 +645,6 @@ namespace KKTOS
 
         private void OnEliminateBeedCompleted(Object sender, EventArgs e)
         {
-
             mComboCount++;
             mEliminateBeedCount--;
             if (mEliminateBeedCount == 0)
@@ -601,7 +653,6 @@ namespace KKTOS
                 FallNewBeeds();
                 Debug.WriteLine("OnEliminateBeedCompleted");
             }
-            Debug.WriteLine("{0} Combo! ", mComboCount);
             if (ComboCompleted != null)
             {
                 ComboCompleted(mComboCount);
@@ -617,13 +668,13 @@ namespace KKTOS
                     if (mBeedChainHorizontal[type][i].belongs == -1)
                     {
                         ScaleTransform imageTrans = new ScaleTransform();
-                        for (int j = mBeedChainHorizontal[type][i].startPos.Column; j < mBeedChainHorizontal[type][i].startPos.Column + mBeedChainHorizontal[type][i].chainLength; j++)
+                        for (int j = mBeedChainHorizontal[type][i].startPos.Col; j < mBeedChainHorizontal[type][i].startPos.Col + mBeedChainHorizontal[type][i].chainLength; j++)
                         {
                             mBeedsMap[mBeedChainHorizontal[type][i].startPos.Row, j].RenderTransform = imageTrans;
                             mVirtualMap[mBeedChainHorizontal[type][i].startPos.Row, j] = -1;
                         }
                         EliminateBeedAnimation(imageTrans, animationBeginMilliSecond);
-                        animationBeginMilliSecond += delayPlayMilliSecond;
+                        animationBeginMilliSecond += mDelayPlayMilliSecond;
                     }
 
                 }
@@ -635,11 +686,11 @@ namespace KKTOS
                         ScaleTransform imageTrans = new ScaleTransform();
                         for (int j = mBeedChainVertical[type][i].startPos.Row; j < mBeedChainVertical[type][i].startPos.Row + mBeedChainVertical[type][i].chainLength; j++)
                         {
-                            mBeedsMap[j, mBeedChainVertical[type][i].startPos.Column].RenderTransform = imageTrans;
-                            mVirtualMap[j, mBeedChainVertical[type][i].startPos.Column] = -1;
+                            mBeedsMap[j, mBeedChainVertical[type][i].startPos.Col].RenderTransform = imageTrans;
+                            mVirtualMap[j, mBeedChainVertical[type][i].startPos.Col] = -1;
                         }
                         EliminateBeedAnimation(imageTrans, animationBeginMilliSecond);
-                        animationBeginMilliSecond += delayPlayMilliSecond;
+                        animationBeginMilliSecond += mDelayPlayMilliSecond;
                     }
 
                 }
@@ -651,7 +702,7 @@ namespace KKTOS
                     {
                         if (mBeedChainHorizontal[type][i].belongs == belong)
                         {
-                            for (int j = mBeedChainHorizontal[type][i].startPos.Column; j < mBeedChainHorizontal[type][i].startPos.Column + mBeedChainHorizontal[type][i].chainLength; j++)
+                            for (int j = mBeedChainHorizontal[type][i].startPos.Col; j < mBeedChainHorizontal[type][i].startPos.Col + mBeedChainHorizontal[type][i].chainLength; j++)
                             {
                                 mBeedsMap[mBeedChainHorizontal[type][i].startPos.Row, j].RenderTransform = imageTrans;
                                 mVirtualMap[mBeedChainHorizontal[type][i].startPos.Row, j] = -1;
@@ -664,22 +715,22 @@ namespace KKTOS
                         {
                             for (int j = mBeedChainVertical[type][i].startPos.Row; j < mBeedChainVertical[type][i].startPos.Row + mBeedChainVertical[type][i].chainLength; j++)
                             {
-                                mBeedsMap[j, mBeedChainVertical[type][i].startPos.Column].RenderTransform = imageTrans;
-                                mVirtualMap[j, mBeedChainVertical[type][i].startPos.Column] = -1;
+                                mBeedsMap[j, mBeedChainVertical[type][i].startPos.Col].RenderTransform = imageTrans;
+                                mVirtualMap[j, mBeedChainVertical[type][i].startPos.Col] = -1;
                             }
                         }
                     }
                     EliminateBeedAnimation(imageTrans, animationBeginMilliSecond);
-                    animationBeginMilliSecond += delayPlayMilliSecond;
+                    animationBeginMilliSecond += mDelayPlayMilliSecond;
                 }
             }
         }
 
-        private void MoveOriginalBeeds(List<Position> mPath)
+        private void MoveOriginalBeedsAnimation(List<Position> mPath)
         {
             Position posSource = mPath[0];
             int nSourceRow = (int)posSource.Row;
-            int nSourceColumn = (int)posSource.Column;
+            int nSourceColumn = (int)posSource.Col;
             int nSourcePositionX = (int)mVisualMap[nSourceRow, nSourceColumn].X - BLOCK_RADIUS;
             int nSourcePositionY = (int)mVisualMap[nSourceRow, nSourceColumn].Y - BLOCK_RADIUS;
 
@@ -688,7 +739,7 @@ namespace KKTOS
             for (int i = 0; i < mPath.Count; ++i)
             {
                 KeyTime kTime = KeyTime.FromTimeSpan(TimeSpan.FromSeconds(dblSeconePosition));
-                Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
+                Position posNew = mVisualMap[mPath[i].Row, mPath[i].Col];
                 Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
                 frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
                 dblSeconePosition += mFallMilliSecond;
@@ -708,7 +759,7 @@ namespace KKTOS
             Storyboard storyboard = new Storyboard();
             storyboard.Children.Add(frames);
 
-            RoleBeedElement.Fill = new ImageBrush() { ImageSource = GetBeedImage(mVirtualMap[mPath[1].Row, mPath[1].Column]) };
+            RoleBeedElement.Fill = new ImageBrush() { ImageSource = GetBeedImage(mVirtualMap[mPath[1].Row, mPath[1].Col]) };
             Canvas.SetLeft(RoleBeedElement, mVisualMap[nSourceRow, nSourceColumn].X);
             Canvas.SetTop(RoleBeedElement, mVisualMap[nSourceRow, nSourceColumn].Y);
             TosSpace.Children.Add(RoleBeedElement);
@@ -790,29 +841,29 @@ namespace KKTOS
 
         private void FallOriginalBeeds()
         {
-            animationBeginMilliSecond += delayPlayMilliSecond;
+            animationBeginMilliSecond += mDelayPlayMilliSecond;
             for (int i = 0; i < mBeedFallCollection.Count; i++)
             {
                 List<Position> mPath = new List<Position>();
                 Int32 mTargetRow = mBeedFallCollection[i].Pos.Row + mBeedFallCollection[i].FallCount;
-                Int32 mTargetCol = mBeedFallCollection[i].Pos.Column;
+                Int32 mTargetCol = mBeedFallCollection[i].Pos.Col;
                 Int32 mSourceRow = mBeedFallCollection[i].Pos.Row;
-                Int32 mSourceCol = mBeedFallCollection[i].Pos.Column;
+                Int32 mSourceCol = mBeedFallCollection[i].Pos.Col;
                 mPath.Add(mBeedFallCollection[i].Pos);
                 mPath.Add(new Position(mTargetRow, mTargetCol));
                 mVirtualMap[mTargetRow, mTargetCol] = mVirtualMap[mSourceRow, mSourceCol];
                 mVirtualMap[mSourceRow, mSourceCol] = -1;
-                MoveOriginalBeeds(mPath);
+                MoveOriginalBeedsAnimation(mPath);
             }
         }
 
         private Int32 mMoveNewBeedCount = 0;
 
-        private void MoveNewBeeds(List<Position> mPath, Int32 type)
+        private void MoveNewBeedsAnimation(List<Position> mPath, Int32 type)
         {
             Position posSource = mPath[1];
             int nSourceRow = (int)posSource.Row;
-            int nSourceColumn = (int)posSource.Column;
+            int nSourceColumn = (int)posSource.Col;
             int nSourcePositionX = (int)mVisualMap[nSourceRow, nSourceColumn].X - BLOCK_RADIUS;
             int nSourcePositionY = (int)mVisualMap[nSourceRow, nSourceColumn].Y - BLOCK_RADIUS;
 
@@ -822,7 +873,7 @@ namespace KKTOS
             for (int i = 1; i >= 0; i--)
             {
                 KeyTime kTime = KeyTime.FromTimeSpan(TimeSpan.FromSeconds(dblSeconePosition));
-                Position posNew = mVisualMap[mPath[i].Row, mPath[i].Column];
+                Position posNew = mVisualMap[mPath[i].Row, mPath[i].Col];
                 Point ptNew = new Point(posNew.X - nSourcePositionX, posNew.Y - nSourcePositionY);
                 frames.KeyFrames.Add(new LinearPointKeyFrame() { KeyTime = kTime, Value = ptNew });
                 dblSeconePosition += mFallMilliSecond;
@@ -843,8 +894,8 @@ namespace KKTOS
             storyboard.Children.Add(frames);
 
             RoleBeedElement.Fill = new ImageBrush() { ImageSource = GetBeedImage(type) };
-            Canvas.SetLeft(RoleBeedElement, mVisualMap[mPath[2].Row, mPath[2].Column].X);
-            Canvas.SetTop(RoleBeedElement, -mVisualMap[mPath[2].Row, mPath[2].Column].Y);
+            Canvas.SetLeft(RoleBeedElement, mVisualMap[mPath[2].Row, mPath[2].Col].X);
+            Canvas.SetTop(RoleBeedElement, -mVisualMap[mPath[2].Row, mPath[2].Col].Y);
             TosSpace.Children.Add(RoleBeedElement);
 
             storyboard.Completed += OnMoveNewBeedsCompleted;
@@ -854,7 +905,7 @@ namespace KKTOS
 
         private void OnMoveNewBeedsCompleted(Object sender, EventArgs e)
         {
-            mMoveNewBeedCount--;
+            mMoveNewBeedCount--; //等待最後一個新珠子掉下來在開始動作
             if (mMoveNewBeedCount == 0)
             {
                 TosSpace.Children.Clear();
@@ -881,7 +932,7 @@ namespace KKTOS
                         mPath.Add(new Position(NewBeedNum, col));
                         mPath.Add(new Position(0, col));
                         mPath.Add(new Position(NewBeedNum - row, col));
-                        MoveNewBeeds(mPath, mVirtualMap[row, col]);
+                        MoveNewBeedsAnimation(mPath, mVirtualMap[row, col]);
                     }
                 }
             }
@@ -903,6 +954,14 @@ namespace KKTOS
             {
                 ManipulationComplete = Visibility.Collapsed;
             }
+
+            //for (int type = 0; type < mBeedsMaxCount; type++)
+            //{
+            //    for (int i = 0; i < EachBeedChainCount[type].Count; i++)
+            //    {
+            //        Debug.WriteLine(String.Format("{0} = {1}", type+1, EachBeedChainCount[type][i]));
+            //    }
+            //}
         }
 
         private void OnTosPanelManipulationStarted(Object sender, System.Windows.Input.ManipulationStartedEventArgs e)
@@ -919,6 +978,21 @@ namespace KKTOS
             mComboCount = 0;
         }
 
+        private void SetCursorInitPos(Point pos)
+        {
+            offsetX = pos.X;
+            offsetY = pos.Y;
+            mPosPrevious.Row = mPosCurrent.Row;
+            mPosPrevious.Col = mPosCurrent.Col;
+        }
+
+        private void ResetManipulationState()
+        {
+            mCountDown = CountDownSecond;
+            mTimeOutComplete = false;
+            mTimerStart = true;
+        }
+
         private void OnTosPanelMouseEnter(Object sender, System.Windows.Input.MouseEventArgs e)
         {
             Debug.WriteLine("OnTosPanelMouseEnter");
@@ -926,38 +1000,39 @@ namespace KKTOS
             if (mFirstClick == false)
             {
                 ClearOutputParameter();
-                CountDown = CountDownSecond;
-                mTimeOutComplete = false;
+                ResetManipulationState();
+
                 GetCoordinate(e.GetPosition(TosSpace));
-                offsetX = e.GetPosition(TosSpace).X;
-                offsetY = e.GetPosition(TosSpace).Y;
-                mPosPrevious.Row = mPosCurrent.Row;
-                mPosPrevious.Column = mPosCurrent.Column;
-                if (mVirtualMap[mPosCurrent.Row, mPosCurrent.Column] != -1)
+                SetCursorInitPos(e.GetPosition(TosSpace));
+
+                if (mVirtualMap[mPosCurrent.Row, mPosCurrent.Col] != -1)
                 {
-                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = null;
-                    CreateCursorImage(e.GetPosition(TosSpace));
+                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Col].Source = null;
+                    if (mCursorImage == null)
+                    {
+                        CreateCursorImage(e.GetPosition(TosSpace));
+                    }
                 }
                 else
                 {
-                    cursorImage = null;
+                    mCursorImage = null;
                 }
-                Debug.WriteLine(mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]);
+                Debug.WriteLine(mVirtualMap[mPosCurrent.Row, mPosCurrent.Col]);
             }
         }
 
         private void CreateCursorImage(Point pos)
         {
-            cursorImage = new Image();
-            cursorImage.Width = BLOCK_SIZE;
-            cursorImage.Height = BLOCK_SIZE;
-            cursorImage.RenderTransformOrigin = new Point(0.5, 0.5);
+            mCursorImage = new Image();
+            mCursorImage.Width = BLOCK_SIZE;
+            mCursorImage.Height = BLOCK_SIZE;
+            mCursorImage.RenderTransformOrigin = new Point(0.5, 0.5);
             ScaleTransform trans = new ScaleTransform();
-            cursorImage.RenderTransform = trans;
-            cursorImage.Source = GetBeedImage((mVirtualMap[mPosCurrent.Row, mPosCurrent.Column]));
-            TosSpace.Children.Add(cursorImage);
-            Canvas.SetLeft(cursorImage, pos.X - cursorShift);
-            Canvas.SetTop(cursorImage, pos.Y - cursorShift);
+            mCursorImage.RenderTransform = trans;
+            mCursorImage.Source = GetBeedImage((mVirtualMap[mPosCurrent.Row, mPosCurrent.Col]));
+            TosSpace.Children.Add(mCursorImage);
+            Canvas.SetLeft(mCursorImage, pos.X - mCursorShift);
+            Canvas.SetTop(mCursorImage, pos.Y - mCursorShift);
         }
 
         private void ManipulationCompletedState()
@@ -965,8 +1040,7 @@ namespace KKTOS
             RemovedCursor();
             TimeLineBar.Width = (Int32)(LayoutRoot.ActualWidth);
             Timer.Stop();
-            mTimerStart = true;
-            
+            mTimeBarStoryBoard.Stop();
             ManipulationComplete = Visibility.Visible;
             StartEliminateBeed();
         }
@@ -981,7 +1055,7 @@ namespace KKTOS
                     ManipulationCompletedState();
                     Debug.WriteLine("TimerStop");
                 }
-                else if (cursorImage != null)
+                else if (mCursorImage != null)
                 {
                     RemovedCursor();
                 }
@@ -992,48 +1066,76 @@ namespace KKTOS
 
         private void RemovedCursor()
         {
-            mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = cursorImage.Source;
-            TosSpace.Children.Remove(cursorImage);
+            mBeedsMap[mPosCurrent.Row, mPosCurrent.Col].Source = mCursorImage.Source;
+            TosSpace.Children.Remove(mCursorImage);
+            mCursorImage = null;
+        }
+
+        private Boolean CheckBeedMoveNormally()
+        {
+            Boolean MoveNormally = false;
+            if (Math.Abs(mPosPrevious.Row - mPosCurrent.Row) == 1 || Math.Abs(mPosPrevious.Col - mPosCurrent.Col) == 1)
+            {
+                if (mTimerStart)
+                {
+                    TimeLineBarAnimation(CountDownSecond);
+                    Debug.WriteLine("TimerStart");
+                    mTimerStart = false;
+                    Timer.Start();
+                    mIsBeedMoved = true;
+                }
+                MoveNormally = true;
+            }
+            return MoveNormally;
+        }
+
+        private void SwapBeed()
+        {
+            Int32 nBeanTypeTarget = mVirtualMap[mPosPrevious.Row, mPosPrevious.Col];
+            mVirtualMap[mPosPrevious.Row, mPosPrevious.Col] = mVirtualMap[mPosCurrent.Row, mPosCurrent.Col];
+            mVirtualMap[mPosCurrent.Row, mPosCurrent.Col] = nBeanTypeTarget;
+
+            ImageSource iSource = mBeedsMap[mPosPrevious.Row, mPosPrevious.Col].Source;
+            mBeedsMap[mPosPrevious.Row, mPosPrevious.Col].Source = mBeedsMap[mPosCurrent.Row, mPosCurrent.Col].Source;
+            mBeedsMap[mPosCurrent.Row, mPosCurrent.Col].Source = iSource;
+
+            mPosPrevious.Row = mPosCurrent.Row;
+            mPosPrevious.Col = mPosCurrent.Col;
+        }
+
+        private Boolean CursorWithinRange(Point pos)
+        {
+            Boolean WithinRange = false;
+            if (pos.X > 0 && pos.Y > 0 && pos.X < TosSpace.ActualWidth && pos.Y < TosSpace.ActualHeight)
+            {
+                WithinRange = true;
+            }
+
+            return WithinRange;
         }
 
         private void OnTosPanelManipulationDelta(Object sender, System.Windows.Input.ManipulationDeltaEventArgs e)
         {
-            if (CountDown <= 0)
+            if (mCountDown <= 0)
             {
                 Debug.WriteLine("CountDown <= 0");
-                //ManipulationCompletedState();
             }
             else
             {
-                Point realPoint = new Point(offsetPoint.X + e.ManipulationOrigin.X, offsetPoint.Y + e.ManipulationOrigin.Y);
+                Point realPoint = new Point(offsetPoint.X + e.ManipulationOrigin.X, Math.Max(offsetPoint.Y + e.ManipulationOrigin.Y, 0));
                 GetCoordinate(realPoint);
 
-                Canvas.SetLeft(cursorImage, realPoint.X - cursorShift);
-                Canvas.SetTop(cursorImage, realPoint.Y - cursorShift);
-
-                if (Math.Abs(mPosPrevious.Row - mPosCurrent.Row) == 1 || Math.Abs(mPosPrevious.Column - mPosCurrent.Column) == 1)
+                if (mCursorImage != null)
                 {
-                    if (mTimerStart)
-                    {
-                        Debug.WriteLine("TimerStart");
-                        mTimerStart = false;
-                        Timer.Start();
-                        mIsBeedMoved = true;
-                    }
+                    Canvas.SetLeft(mCursorImage, realPoint.X - mCursorShift);
+                    Canvas.SetTop(mCursorImage, realPoint.Y - mCursorShift);
+                }
 
-                    Int32 nBeanTypeTarget = mVirtualMap[mPosPrevious.Row, mPosPrevious.Column];
-                    mVirtualMap[mPosPrevious.Row, mPosPrevious.Column] = mVirtualMap[mPosCurrent.Row, mPosCurrent.Column];
-                    mVirtualMap[mPosCurrent.Row, mPosCurrent.Column] = nBeanTypeTarget;
-
-                    ImageSource iSource = mBeedsMap[mPosPrevious.Row, mPosPrevious.Column].Source;
-                    mBeedsMap[mPosPrevious.Row, mPosPrevious.Column].Source = mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source;
-                    mBeedsMap[mPosCurrent.Row, mPosCurrent.Column].Source = iSource;
-
-                    mPosPrevious.Row = mPosCurrent.Row;
-                    mPosPrevious.Column = mPosCurrent.Column;
+                if (CheckBeedMoveNormally())
+                {
+                    SwapBeed();
                 }
             }
         }
-
     }
 }

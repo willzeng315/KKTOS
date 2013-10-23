@@ -26,10 +26,11 @@ namespace KKTOS
             ComboText.Text = String.Format("{0} Combo !!", combo);
         }
 
-        private void beedPanel1_ManipulationStarted(object sender, System.Windows.Input.ManipulationStartedEventArgs e)
+        private void OnChangeBeedManipulationStarted(object sender, System.Windows.Input.ManipulationStartedEventArgs e)
         {
-
-            
+            beedPanel.ChangeBeedColor(6, 5);
+            beedPanel.ChangeBeedColor(3, 5);
         }
+
     }
 }
